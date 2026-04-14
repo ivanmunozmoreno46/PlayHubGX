@@ -16,7 +16,13 @@ export function useMultiplayer() {
   const connectionsRef = useRef([])
   const hostConnectionRef = useRef(null)
   const playerName = useRef('')
-  const playerId = useRef('')
+  const playerIdRef = useRef('')
+  const stateRef = useRef(state)
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    stateRef.current = state
+  }, [state])
 
   // Generate random player name
   useEffect(() => {
@@ -39,95 +45,103 @@ export function useMultiplayer() {
     return code
   }
 
-  // Send message to all peers (host only)
-  const broadcastToAll = useCallback((data, excludeId) => {
+  // Send message to all connected peers
+  const broadcastToAll = useCallback((data, excludePeerId) => {
     const msgStr = JSON.stringify(data)
     connectionsRef.current.forEach((conn) => {
-      if (conn.peer !== excludeId && conn.open) {
+      if (conn.open && conn.peer !== excludePeerId) {
         conn.send(msgStr)
       }
     })
   }, [])
 
-  // Update players list
-  const updatePlayersList = useCallback((players) => {
-    setState(prev => ({ ...prev, players }))
-    // Broadcast to all clients
-    broadcastToAll({
-      type: 'players_update',
-      players,
-    })
-  }, [broadcastToAll])
-
-  // Add player to list
-  const addPlayer = useCallback((player) => {
-    setState(prev => {
-      const newPlayers = [...prev.players, player]
-      updatePlayersList(newPlayers)
-      return { ...prev, players: newPlayers }
-    })
-  }, [updatePlayersList])
-
-  // Remove player from list
-  const removePlayer = useCallback((peerId) => {
-    setState(prev => {
-      const newPlayers = prev.players.filter(p => p.id !== peerId)
-      updatePlayersList(newPlayers)
-      return { ...prev, players: newPlayers }
-    })
-  }, [updatePlayersList])
-
-  // Handle incoming message
-  const handleMessage = useCallback((data, fromPeerId) => {
+  // Handle data from a connection
+  const handleConnectionData = useCallback((conn, data) => {
     switch (data.type) {
-      case 'join_request':
-        // Client wants to join (host only)
-        if (state.isHost) {
-          const newPlayer = {
-            id: fromPeerId,
-            name: data.name || 'Player',
-            playerId: null,
-            isConnected: true,
-          }
-          addPlayer(newPlayer)
-          
-          // Send room state to client
-          if (hostConnectionRef.current) {
-            hostConnectionRef.current.send(JSON.stringify({
-              type: 'join_accepted',
-              roomCode: state.roomCode,
-              players: [...state.players, newPlayer],
-              isHost: false,
-            }))
-          }
+      case 'join_request': {
+        console.log('[Multiplayer] Client wants to join:', conn.peer, data.name)
+        const newPlayer = {
+          id: conn.peer,
+          name: data.name || 'Player',
+          playerId: null,
+          isConnected: true,
         }
-        break
+        
+        // Add player to state
+        setState(prev => {
+          const newPlayers = [...prev.players, newPlayer]
+          return { ...prev, players: newPlayers }
+        })
 
-      case 'chat_message':
+        // Send join_accepted back to client
+        conn.send(JSON.stringify({
+          type: 'join_accepted',
+          roomCode: stateRef.current.roomCode,
+          players: [...stateRef.current.players, newPlayer],
+          isHost: false,
+        }))
+
+        // Broadcast players update to all
+        broadcastToAll({
+          type: 'players_update',
+          players: [...stateRef.current.players, newPlayer],
+        })
+        break
+      }
+
+      case 'join_accepted': {
+        console.log('[Multiplayer] Join accepted!')
+        setState(prev => ({
+          ...prev,
+          roomCode: data.roomCode,
+          players: data.players || [],
+          isHost: false,
+          error: null,
+        }))
+        break
+      }
+
+      case 'players_update': {
+        setState(prev => ({
+          ...prev,
+          players: data.players || [],
+        }))
+        break
+      }
+
+      case 'chat_message': {
         setState(prev => ({
           ...prev,
           chatMessages: [...prev.chatMessages, data],
         }))
-        if (state.isHost) {
-          broadcastToAll(data, fromPeerId)
+        if (stateRef.current.isHost) {
+          broadcastToAll(data, conn.peer)
         }
         break
+      }
 
-      case 'player_input':
-        // Forward to host
-        if (state.isHost) {
-          // Handle player input from clients
-        }
+      case 'game_started': {
+        setState(prev => ({ ...prev, isPlaying: true }))
         break
+      }
 
-      case 'leave_room':
-        removePlayer(fromPeerId)
+      case 'game_stopped': {
+        setState(prev => ({ ...prev, isPlaying: false }))
         break
+      }
+
+      case 'leave_room': {
+        setState(prev => {
+          const newPlayers = prev.players.filter(p => p.id !== conn.peer)
+          return { ...prev, players: newPlayers }
+        })
+        break
+      }
 
       default:
         break
     }
-  }, [state.isHost, state.roomCode, state.players, addPlayer, removePlayer, broadcastToAll])
+  }, [broadcastToAll])
 
   // Create room (host)
   const createRoom = useCallback(() => {
@@ -146,7 +160,7 @@ export function useMultiplayer() {
 
     peer.on('open', (id) => {
       console.log('[Multiplayer] Room created:', id)
-      playerId.current = id
+      playerIdRef.current = id
       setState(prev => ({
         ...prev,
         isConnected: true,
@@ -159,6 +173,8 @@ export function useMultiplayer() {
           isConnected: true,
         }],
         error: null,
+        chatMessages: [],
+        isPlaying: false,
       }))
     })
 
@@ -166,45 +182,45 @@ export function useMultiplayer() {
       console.log('[Multiplayer] Client connected:', conn.peer)
       connectionsRef.current.push(conn)
 
+      conn.on('open', () => {
+        console.log('[Multiplayer] Connection open:', conn.peer)
+      })
+
       conn.on('data', (data) => {
         try {
-          handleMessage(JSON.parse(data), conn.peer)
+          handleConnectionData(conn, typeof data === 'string' ? JSON.parse(data) : data)
         } catch (error) {
-          console.error('[Multiplayer] Error parsing message:', error)
+          console.error('[Multiplayer] Error parsing message:', error, data)
         }
       })
 
       conn.on('close', () => {
         console.log('[Multiplayer] Client disconnected:', conn.peer)
-        removePlayer(conn.peer)
         connectionsRef.current = connectionsRef.current.filter(c => c.peer !== conn.peer)
+        setState(prev => ({
+          ...prev,
+          players: prev.players.filter(p => p.id !== conn.peer),
+        }))
       })
 
-      conn.on('error', (error) => {
-        console.error('[Multiplayer] Connection error:', error)
+      conn.on('error', (err) => {
+        console.error('[Multiplayer] Connection error:', err)
       })
     })
 
     peer.on('error', (error) => {
       console.error('[Multiplayer] Peer error:', error)
-      if (error.type === 'unavailable-id') {
-        setState(prev => ({
-          ...prev,
-          error: 'Room code already exists. Try again.',
-        }))
-      } else {
-        setState(prev => ({
-          ...prev,
-          error: 'Failed to create room. Please try again.',
-        }))
-      }
+      setState(prev => ({
+        ...prev,
+        error: 'Failed to create room. Please try again.',
+      }))
     })
 
     peerRef.current = peer
-  }, [handleMessage, removePlayer])
+  }, [handleConnectionData])
 
   // Join room (client)
-  const joinRoom = useCallback((code, name) => {
+  const joinRoom = useCallback((code) => {
     if (peerRef.current) {
       peerRef.current.destroy()
     }
@@ -212,15 +228,17 @@ export function useMultiplayer() {
     const peerId = `playhub-client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const hostPeerId = `playhub-${code}`
     
-    console.log('[Multiplayer] Joining room:', code)
+    console.log('[Multiplayer] Joining room:', code, 'as', peerId)
+
+    setState(prev => ({ ...prev, error: null }))
 
     const peer = new Peer(peerId, {
       debug: 2,
     })
 
     peer.on('open', () => {
-      console.log('[Multiplayer] Connected to signaling server, joining room...')
-      playerId.current = peerId
+      console.log('[Multiplayer] Connected to signaling server')
+      playerIdRef.current = peerId
 
       // Connect to host
       const conn = peer.connect(hostPeerId, {
@@ -234,34 +252,31 @@ export function useMultiplayer() {
         // Send join request
         conn.send(JSON.stringify({
           type: 'join_request',
-          name: name || playerName.current,
+          name: playerName.current,
         }))
       })
 
       conn.on('data', (data) => {
         try {
-          const message = JSON.parse(data)
-          handleMessage(message, 'host')
+          handleConnectionData(conn, typeof data === 'string' ? JSON.parse(data) : data)
         } catch (error) {
-          console.error('[Multiplayer] Error parsing message:', error)
+          console.error('[Multiplayer] Error parsing message:', error, data)
         }
       })
 
       conn.on('close', () => {
         console.log('[Multiplayer] Disconnected from host')
+        hostConnectionRef.current = null
         setState(prev => ({
           ...prev,
           isConnected: false,
+          roomCode: null,
           error: 'Disconnected from room',
         }))
       })
 
-      conn.on('error', (error) => {
-        console.error('[Multiplayer] Connection error:', error)
-        setState(prev => ({
-          ...prev,
-          error: 'Failed to connect to room',
-        }))
+      conn.on('error', (err) => {
+        console.error('[Multiplayer] Connection error:', err)
       })
     })
 
@@ -272,7 +287,7 @@ export function useMultiplayer() {
           ...prev,
           error: 'Room not found. Check the code and try again.',
         }))
-      } else {
+      } else if (error.type !== 'destroyed') {
         setState(prev => ({
           ...prev,
           error: 'Failed to join room. Please try again.',
@@ -281,17 +296,22 @@ export function useMultiplayer() {
     })
 
     peerRef.current = peer
-  }, [handleMessage])
+  }, [handleConnectionData])
 
   // Leave room
   const leaveRoom = useCallback(() => {
-    if (hostConnectionRef.current) {
-      hostConnectionRef.current.send(JSON.stringify({
-        type: 'leave_room',
-      }))
+    // Notify others
+    if (stateRef.current.isHost) {
+      broadcastToAll({ type: 'leave_room' })
+      connectionsRef.current.forEach(conn => {
+        if (conn.open) conn.close()
+      })
+    } else if (hostConnectionRef.current && hostConnectionRef.current.open) {
+      hostConnectionRef.current.send(JSON.stringify({ type: 'leave_room' }))
       hostConnectionRef.current.close()
     }
 
+    // Cleanup
     if (peerRef.current) {
       peerRef.current.destroy()
       peerRef.current = null
@@ -299,7 +319,7 @@ export function useMultiplayer() {
 
     connectionsRef.current = []
     hostConnectionRef.current = null
-    playerId.current = ''
+    playerIdRef.current = ''
 
     setState({
       isConnected: false,
@@ -310,7 +330,7 @@ export function useMultiplayer() {
       chatMessages: [],
       isPlaying: false,
     })
-  }, [])
+  }, [broadcastToAll])
 
   // Send chat message
   const sendChat = useCallback((message) => {
@@ -321,20 +341,19 @@ export function useMultiplayer() {
       timestamp: Date.now(),
     }
 
-    if (state.isHost) {
-      setState(prev => ({
-        ...prev,
-        chatMessages: [...prev.chatMessages, chatMessage],
-      }))
+    // Add to local state immediately
+    setState(prev => ({
+      ...prev,
+      chatMessages: [...prev.chatMessages, chatMessage],
+    }))
+
+    // Send to others
+    if (stateRef.current.isHost) {
       broadcastToAll(chatMessage)
     } else if (hostConnectionRef.current && hostConnectionRef.current.open) {
       hostConnectionRef.current.send(JSON.stringify(chatMessage))
-      setState(prev => ({
-        ...prev,
-        chatMessages: [...prev.chatMessages, chatMessage],
-      }))
     }
-  }, [state.isHost, broadcastToAll])
+  }, [broadcastToAll])
 
   // Update player name
   const updateName = useCallback((name) => {
@@ -354,40 +373,43 @@ export function useMultiplayer() {
     broadcastToAll({ type: 'game_stopped' })
   }, [broadcastToAll])
 
-  // Assign player ID (host only)
+  // Assign player slot (host only)
   const assignPlayer = useCallback((targetId) => {
     setState(prev => {
-      const players = prev.players.map(p => {
+      const assignedSlots = prev.players
+        .map(p => p.playerId)
+        .filter(id => id !== null)
+      const nextSlot = [1, 2, 3, 4, 5, 6, 7, 8]
+        .find(slot => !assignedSlots.includes(slot))
+      
+      const newPlayers = prev.players.map(p => {
         if (p.id === targetId && p.playerId === null) {
-          const assignedSlots = prev.players
-            .map(pl => pl.playerId)
-            .filter(id => id !== null)
-          const nextSlot = [1, 2, 3, 4, 5, 6, 7, 8]
-            .find(slot => !assignedSlots.includes(slot))
           return { ...p, playerId: nextSlot || null }
         }
         return p
       })
-      updatePlayersList(players)
-      return { ...prev, players }
+      
+      return { ...prev, players: newPlayers }
     })
-  }, [updatePlayersList])
+  }, [])
 
   // Remove player (host only)
-  const removePlayerByHost = useCallback((targetId) => {
+  const removePlayer = useCallback((targetId) => {
     const conn = connectionsRef.current.find(c => c.peer === targetId)
-    if (conn) {
+    if (conn && conn.open) {
       conn.close()
     }
-    removePlayer(targetId)
-  }, [removePlayer])
+    setState(prev => ({
+      ...prev,
+      players: prev.players.filter(p => p.id !== targetId),
+    }))
+  }, [])
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (peerRef.current) {
         peerRef.current.destroy()
-        peerRef.current = null
       }
       connectionsRef.current = []
       hostConnectionRef.current = null
@@ -405,6 +427,6 @@ export function useMultiplayer() {
     startGame,
     stopGame,
     assignPlayer,
-    removePlayer: removePlayerByHost,
+    removePlayer,
   }
 }
