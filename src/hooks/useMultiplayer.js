@@ -26,6 +26,90 @@ export function useMultiplayer() {
     }
   }, [])
 
+  // Handle incoming messages (MUST be before connect)
+  const handleMessage = useCallback((data) => {
+    switch (data.type) {
+      case 'welcome':
+        console.log('[Multiplayer] Welcome, connection ID:', data.connectionId)
+        break
+
+      case 'room_created':
+        setState(prev => ({
+          ...prev,
+          isHost: true,
+          room: data.room,
+          error: null,
+        }))
+        break
+
+      case 'room_joined':
+        setState(prev => ({
+          ...prev,
+          isHost: data.isHost,
+          room: data.room,
+          error: null,
+        }))
+        break
+
+      case 'player_joined':
+      case 'player_assigned':
+      case 'player_removed':
+      case 'player_left':
+      case 'name_updated':
+        if (data.players) {
+          setState(prev => ({
+            ...prev,
+            room: prev.room ? { ...prev.room, players: data.players } : null,
+          }))
+        }
+        break
+
+      case 'game_started':
+        setState(prev => ({
+          ...prev,
+          room: prev.room ? { ...prev.room, isPlaying: true } : null,
+        }))
+        break
+
+      case 'game_stopped':
+        setState(prev => ({
+          ...prev,
+          room: prev.room ? { ...prev.room, isPlaying: false } : null,
+        }))
+        break
+
+      case 'room_dissolved':
+        setState({
+          isConnected: true,
+          isHost: false,
+          room: null,
+          error: 'Room has been dissolved by the host',
+          chatMessages: [],
+        })
+        break
+
+      case 'chat_message':
+        setState(prev => ({
+          ...prev,
+          chatMessages: [...prev.chatMessages, data],
+        }))
+        break
+
+      case 'error':
+        setState(prev => ({
+          ...prev,
+          error: data.message,
+        }))
+        break
+
+      case 'remote_input':
+      case 'sync_state':
+        // These are handled by the game emulator
+        window.dispatchEvent(new CustomEvent('netplay-message', { detail: data }))
+        break
+    }
+  }, [])
+
   // Initialize connection
   const connect = useCallback(() => {
     if (socketRef.current) {
@@ -111,90 +195,6 @@ export function useMultiplayer() {
       })
     }
   }, [state.isConnected, connect])
-
-  // Handle incoming messages
-  const handleMessage = useCallback((data) => {
-    switch (data.type) {
-      case 'welcome':
-        console.log('[Multiplayer] Welcome, connection ID:', data.connectionId)
-        break
-
-      case 'room_created':
-        setState(prev => ({
-          ...prev,
-          isHost: true,
-          room: data.room,
-          error: null,
-        }))
-        break
-
-      case 'room_joined':
-        setState(prev => ({
-          ...prev,
-          isHost: data.isHost,
-          room: data.room,
-          error: null,
-        }))
-        break
-
-      case 'player_joined':
-      case 'player_assigned':
-      case 'player_removed':
-      case 'player_left':
-      case 'name_updated':
-        if (data.players) {
-          setState(prev => ({
-            ...prev,
-            room: prev.room ? { ...prev.room, players: data.players } : null,
-          }))
-        }
-        break
-
-      case 'game_started':
-        setState(prev => ({
-          ...prev,
-          room: prev.room ? { ...prev.room, isPlaying: true } : null,
-        }))
-        break
-
-      case 'game_stopped':
-        setState(prev => ({
-          ...prev,
-          room: prev.room ? { ...prev.room, isPlaying: false } : null,
-        }))
-        break
-
-      case 'room_dissolved':
-        setState({
-          isConnected: true,
-          isHost: false,
-          room: null,
-          error: 'Room has been dissolved by the host',
-          chatMessages: [],
-        })
-        break
-
-      case 'chat_message':
-        setState(prev => ({
-          ...prev,
-          chatMessages: [...prev.chatMessages, data],
-        }))
-        break
-
-      case 'error':
-        setState(prev => ({
-          ...prev,
-          error: data.message,
-        }))
-        break
-
-      case 'remote_input':
-      case 'sync_state':
-        // These are handled by the game emulator
-        window.dispatchEvent(new CustomEvent('netplay-message', { detail: data }))
-        break
-    }
-  }, [])
 
   // Create a new room
   const createRoom = useCallback((name) => {
