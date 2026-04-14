@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Peer } from 'peerjs'
+import Peer from 'peerjs'
 
 export function useMultiplayer() {
   const [state, setState] = useState({
