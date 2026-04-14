@@ -1,0 +1,5 @@
+{
+  "name": "playhub-gx",
+  "main": "party/game-server.ts",
+  "compatibilityDate": "2024-01-01"
+}
