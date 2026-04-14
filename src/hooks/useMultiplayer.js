@@ -1,36 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import PartySocket from 'partysocket'
 
-export interface Player {
-  id: string
-  name: string
-  playerId: number | null
-  isConnected: boolean
-}
-
-export interface RoomState {
-  gameCode: string
-  host: string
-  players: Player[]
-  isPlaying: boolean
-}
-
-export interface MultiplayerState {
-  isConnected: boolean
-  isHost: boolean
-  room: RoomState | null
-  error: string | null
-  chatMessages: ChatMessage[]
-}
-
-export interface ChatMessage {
-  from: string
-  message: string
-  timestamp: number
-}
-
 export function useMultiplayer() {
-  const [state, setState] = useState<MultiplayerState>({
+  const [state, setState] = useState({
     isConnected: false,
     isHost: false,
     room: null,
@@ -38,8 +10,8 @@ export function useMultiplayer() {
     chatMessages: [],
   })
 
-  const socketRef = useRef<PartySocket | null>(null)
-  const playerName = useRef<string>('')
+  const socketRef = useRef(null)
+  const playerName = useRef('')
 
   // Generate random player name if not set
   useEffect(() => {
@@ -98,7 +70,7 @@ export function useMultiplayer() {
   }, [])
 
   // Handle incoming messages
-  const handleMessage = useCallback((data: any) => {
+  const handleMessage = useCallback((data) => {
     switch (data.type) {
       case 'welcome':
         console.log('[Multiplayer] Welcome, connection ID:', data.connectionId)
@@ -182,7 +154,7 @@ export function useMultiplayer() {
   }, [])
 
   // Create a new room
-  const createRoom = useCallback((name?: string) => {
+  const createRoom = useCallback((name) => {
     if (!socketRef.current) {
       connect()
       setTimeout(() => {
@@ -201,7 +173,7 @@ export function useMultiplayer() {
   }, [connect])
 
   // Join existing room
-  const joinRoom = useCallback((code: string, name?: string) => {
+  const joinRoom = useCallback((code, name) => {
     if (!socketRef.current) {
       connect()
       setTimeout(() => {
@@ -238,7 +210,7 @@ export function useMultiplayer() {
   }, [state.room])
 
   // Assign player ID (host only)
-  const assignPlayer = useCallback((targetId: string) => {
+  const assignPlayer = useCallback((targetId) => {
     if (socketRef.current && state.room && state.isHost) {
       socketRef.current.send(JSON.stringify({
         type: 'assign_player',
@@ -249,7 +221,7 @@ export function useMultiplayer() {
   }, [state.room, state.isHost])
 
   // Remove player (host only)
-  const removePlayer = useCallback((targetId: string) => {
+  const removePlayer = useCallback((targetId) => {
     if (socketRef.current && state.room && state.isHost) {
       socketRef.current.send(JSON.stringify({
         type: 'remove_player',
@@ -280,7 +252,7 @@ export function useMultiplayer() {
   }, [state.room, state.isHost])
 
   // Send chat message
-  const sendChat = useCallback((message: string) => {
+  const sendChat = useCallback((message) => {
     if (socketRef.current && state.room) {
       socketRef.current.send(JSON.stringify({
         type: 'chat',
@@ -291,7 +263,7 @@ export function useMultiplayer() {
   }, [state.room])
 
   // Send player input (for netplay)
-  const sendInput = useCallback((playerId: number, input: any) => {
+  const sendInput = useCallback((playerId, input) => {
     if (socketRef.current && state.room) {
       socketRef.current.send(JSON.stringify({
         type: 'player_input',
@@ -303,7 +275,7 @@ export function useMultiplayer() {
   }, [state.room])
 
   // Update player name
-  const updateName = useCallback((name: string) => {
+  const updateName = useCallback((name) => {
     playerName.current = name
     localStorage.setItem('playhub_name', name)
     
