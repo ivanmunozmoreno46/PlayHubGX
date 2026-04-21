@@ -37,7 +37,7 @@ function App() {
               </div>
               <div className="h-5 w-px bg-gray-400"></div>
               <span className="font-retro text-[8px] text-gray-600 tracking-widest">
-                MEMORY CARD MANAGER
+                PlayHubGX
               </span>
             </div>
             
@@ -99,7 +99,7 @@ function App() {
                   <div className="relative z-10 w-full h-full flex items-center justify-center">
                     <div className="text-center">
                       <div className="font-retro text-[12px] text-yellow-600 mb-2">
-                        MEMORY CARD MANAGER
+                        PlayHubGX
                       </div>
                       <div className="font-retro text-[8px] text-gray-600">
                         PRESS POWER TO START

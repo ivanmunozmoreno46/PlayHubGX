@@ -12,9 +12,8 @@ import Peer from 'peerjs'
  *   into the emulator as Player 2 via gameManager.simulateInput.
  * - Latency is estimated with periodic ping/pong messages over the DataChannel.
  *
- * Two separate Peer instances can coexist without conflict:
- *   playhub-<CODE>        -> legacy chat lobby (useMultiplayer.js)
- *   playhubgx-room-<CODE> -> streaming game room (this hook)
+ * Peer IDs use the `playhubgx-room-<CODE>` prefix for the host and
+ * `playhubgx-room-guest-<...>` for each guest.
  */
 
 const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
