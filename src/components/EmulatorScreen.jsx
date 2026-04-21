@@ -1,10 +1,8 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { useEmulator } from '../hooks/useEmulator'
 import { useGamepad } from '../hooks/useGamepad'
-import { useMultiplayer } from '../hooks/useMultiplayer'
 import { useGameRoom } from '../hooks/useGameRoom'
 import GamepadIndicator from './GamepadIndicator'
-import MultiplayerLobby from './MultiplayerLobby'
 import GameRoomPanel from './GameRoomPanel'
 
 /**
@@ -104,7 +102,6 @@ function EmulatorScreen() {
   const [biosFile, setBiosFile] = useState(null)
   const [romFiles, setRomFiles] = useState([])
   const [step, setStep] = useState('bios')
-  const [showMultiplayer, setShowMultiplayer] = useState(false)
   const [showGameRoom, setShowGameRoom] = useState(false)
 
   const {
@@ -115,7 +112,6 @@ function EmulatorScreen() {
 
   const { gamepadState } = useGamepad()
 
-  const multiplayer = useMultiplayer()
   const gameRoom = useGameRoom()
 
   // Guests never load a local emulator: their panel must stay on screen.
@@ -244,18 +240,6 @@ function EmulatorScreen() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowMultiplayer(!showMultiplayer)}
-            className={`
-              px-3 py-1 font-retro text-[8px] rounded transition-all
-              ${showMultiplayer
-                ? 'bg-green-600 hover:bg-green-500 text-white'
-                : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
-              }
-            `}
-          >
-            {showMultiplayer ? 'MP: ON' : 'MP: OFF'}
-          </button>
-          <button
             onClick={() => {
               // Guests cannot hide their own panel (the video is the whole UI).
               if (isGuestStreaming) return
@@ -292,16 +276,6 @@ function EmulatorScreen() {
 
       {/* Main Content Area - PS1 Memory Card Manager Style */}
       <div className="relative w-full flex-1" style={{ aspectRatio: '4/3' }}>
-        {/* Multiplayer Panel */}
-        {showMultiplayer && !isGuestStreaming && (
-          <div className="absolute inset-0 z-20 bg-gray-700/95 backdrop-blur-sm overflow-y-auto">
-            <div className="min-h-full flex items-center justify-center p-4">
-              <div className="w-full max-w-md bg-gray-800 rounded-lg border-2 border-ps1-gray shadow-2xl">
-                <MultiplayerLobby multiplayer={multiplayer} />
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Game Room (Host-Client streaming) - host panel stays inside the console screen */}
         {gameRoomVisible && !isGuestStreaming && (
