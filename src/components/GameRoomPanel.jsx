@@ -345,10 +345,15 @@ function GuestView({ room }) {
             playsInline
             muted={isMuted}
             className="w-full h-full object-contain bg-black"
-            // PSX native resolution is tiny (~320x240). Keep pixels crisp when
-            // the <video> is upscaled instead of letting the browser apply a
-            // blurry bilinear filter.
-            style={{ imageRendering: 'pixelated' }}
+            // PSX native resolution is tiny (~320x240); pixelated keeps the
+            // upscale crisp instead of applying a blurry bilinear filter.
+            // The filter compensates for the RGB full-range -> YUV limited-
+            // range conversion that WebRTC encoders apply, which tends to
+            // wash out contrast and saturation on the receiver.
+            style={{
+              imageRendering: 'pixelated',
+              filter: 'contrast(1.08) saturate(1.18)',
+            }}
           />
         </div>
 

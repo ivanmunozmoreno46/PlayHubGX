@@ -103,6 +103,25 @@ async function tuneVideoSenderForLatency(call) {
   }
 }
 
+/**
+ * Minimise the receiver jitter buffer on the guest side so incoming frames
+ * are rendered as soon as they arrive. Trade smoothness for real-time input
+ * responsiveness — this is essentially what Stadia/GeForce Now do.
+ */
+function tuneReceiverForLatency(call) {
+  try {
+    const pc = call?.peerConnection
+    if (!pc || !pc.getReceivers) return
+    pc.getReceivers().forEach((receiver) => {
+      if (!receiver || receiver.track?.kind !== 'video') return
+      try { receiver.playoutDelayHint = 0 } catch (_) { /* noop */ }
+      try { receiver.jitterBufferTarget = 0 } catch (_) { /* noop */ }
+    })
+  } catch (err) {
+    console.warn('[GameRoom] Could not tune video receiver:', err)
+  }
+}
+
 export function useGameRoom() {
   // 'idle' | 'hosting' | 'guest'
   const [role, setRole] = useState('idle')
@@ -434,6 +453,10 @@ export function useGameRoom() {
       try { call.answer() } catch (err) { console.warn('[GameRoom] answer failed:', err) }
       call.on('stream', (stream) => {
         setRemoteStream(stream)
+        // Apply after the PC is fully negotiated; some browsers only accept
+        // these hints once receivers actually exist.
+        setTimeout(() => tuneReceiverForLatency(call), 300)
+        setTimeout(() => tuneReceiverForLatency(call), 1500)
       })
       call.on('close', () => {
         hostMediaConnRef.current = null
