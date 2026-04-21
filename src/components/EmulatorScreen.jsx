@@ -340,7 +340,7 @@ function EmulatorScreen() {
               {/* Title bar */}
               <div className="text-center mb-3">
                 <div className="font-retro text-[10px] text-gray-300">
-                  MEMORY CARD MANAGER
+                  PlayHubGX
                 </div>
               </div>
 
