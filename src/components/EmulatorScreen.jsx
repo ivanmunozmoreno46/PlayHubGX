@@ -366,19 +366,13 @@ function EmulatorScreen() {
 
               {/* Grid area */}
               <div className="flex-1 grid grid-cols-12 grid-rows-8 gap-0 mb-3">
-                {/* Left side - Memory Card 1 (BIOS slot) */}
+                {/* Left side - Wrench (BIOS / settings slot) */}
                 <div className="col-span-4 row-span-8 flex flex-col">
                   <div className="bg-gray-700 px-2 py-1 border border-gray-600 mb-1">
                     <SlotHeader slot="1" color="#22c55e" />
                   </div>
-                  <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-0">
-                    {/* BIOS indicator */}
-                    <div className="col-span-3 row-span-1 flex items-center justify-center bg-gray-600 border border-gray-500">
-                      <span className="text-2xl">💿</span>
-                    </div>
-                    <div className="col-span-3 row-span-2 flex items-center justify-center bg-gray-600 border border-gray-500">
-                      <span className="text-lg">🔧</span>
-                    </div>
+                  <div className="flex-1 flex items-center justify-center bg-gray-600 border border-gray-500">
+                    <span className="text-3xl">🔧</span>
                   </div>
                 </div>
 
@@ -389,15 +383,13 @@ function EmulatorScreen() {
                   </StartButton>
                 </div>
 
-                {/* Right side - Empty slot 2 */}
+                {/* Right side - Disc (game slot) */}
                 <div className="col-span-4 row-span-8 flex flex-col">
                   <div className="bg-gray-700 px-2 py-1 border border-gray-600 mb-1">
                     <SlotHeader slot="2" color="#eab308" />
                   </div>
-                  <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-0">
-                    {Array.from({ length: 9 }).map((_, i) => (
-                      <GridCell key={i} className="bg-gray-600 border-gray-500" />
-                    ))}
+                  <div className="flex-1 flex items-center justify-center bg-gray-600 border border-gray-500">
+                    <span className="text-3xl">💿</span>
                   </div>
                 </div>
               </div>
