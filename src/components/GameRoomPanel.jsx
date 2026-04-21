@@ -176,8 +176,10 @@ function GuestView({ room }) {
 
   const [inputCode, setInputCode] = useState('')
   const [isMuted, setIsMuted] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const videoRef = useRef(null)
   const inputFocusRef = useRef(null)
+  const stageRef = useRef(null)
 
   // Attach / detach the incoming MediaStream to the <video> element.
   useEffect(() => {
@@ -224,6 +226,29 @@ function GuestView({ room }) {
       if (videoRef.current) videoRef.current.muted = next
       return next
     })
+  }, [])
+
+  // Track browser/OS fullscreen state so the button label stays in sync.
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+
+  const toggleFullscreen = useCallback(async () => {
+    const el = stageRef.current
+    if (!el) return
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen()
+      } else if (el.requestFullscreen) {
+        await el.requestFullscreen()
+        // Keep keyboard focus on the capture area once fullscreen is active.
+        setTimeout(() => inputFocusRef.current?.focus(), 50)
+      }
+    } catch (_) {
+      /* ignore fullscreen failures */
+    }
   }, [])
 
   // Not connected yet: show the join form.
@@ -293,21 +318,38 @@ function GuestView({ room }) {
       )}
 
       <div
-        ref={inputFocusRef}
-        tabIndex={0}
-        className="relative w-full bg-black border-2 border-ps1-gray outline-none focus:border-green-500"
-        style={{ aspectRatio: '4/3' }}
+        ref={stageRef}
+        className={`relative bg-black border-2 border-ps1-gray mx-auto ${
+          isFullscreen ? 'w-screen h-screen' : 'w-full'
+        }`}
+        style={
+          isFullscreen
+            ? {}
+            : {
+                aspectRatio: '4/3',
+                // Scale the stage so it fills the available viewport while
+                // preserving 4:3. The 160px budget leaves room for the panel
+                // header, hint row and the browser chrome.
+                maxWidth: 'min(100%, calc((100vh - 160px) * 4 / 3))',
+              }
+        }
       >
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted={isMuted}
-          className="w-full h-full object-contain bg-black"
-        />
+        <div
+          ref={inputFocusRef}
+          tabIndex={0}
+          className="absolute inset-0 outline-none focus:ring-2 focus:ring-green-500 focus:ring-inset"
+        >
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted={isMuted}
+            className="w-full h-full object-contain bg-black"
+          />
+        </div>
 
         {!remoteStream && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/80 pointer-events-none">
             <div className="text-center">
               <div className="font-retro text-[10px] text-yellow-400 mb-2">
                 {status === 'connected' ? 'WAITING FOR HOST STREAM' : 'CONNECTING TO HOST'}
@@ -320,12 +362,19 @@ function GuestView({ room }) {
         )}
 
         {remoteStream && (
-          <div className="absolute bottom-2 right-2 flex items-center gap-2">
+          <div className="absolute bottom-2 right-2 flex items-center gap-2 z-10">
             <button
               onClick={toggleMute}
               className="px-3 py-1 bg-gray-900/80 hover:bg-gray-800 text-white font-retro text-[8px] rounded border border-gray-600"
             >
               {isMuted ? 'UNMUTE' : 'MUTE'}
+            </button>
+            <button
+              onClick={toggleFullscreen}
+              className="px-3 py-1 bg-gray-900/80 hover:bg-gray-800 text-white font-retro text-[8px] rounded border border-gray-600"
+              title="Toggle fullscreen"
+            >
+              {isFullscreen ? 'EXIT FULL' : 'FULLSCREEN'}
             </button>
           </div>
         )}

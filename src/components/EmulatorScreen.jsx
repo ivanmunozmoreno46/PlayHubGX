@@ -218,6 +218,17 @@ function EmulatorScreen() {
   }, [])
 
   return (
+    <>
+    {/* Guest streaming: escape the 4:3 console frame and take over the whole viewport */}
+    {isGuestStreaming && (
+      <div className="fixed inset-0 z-50 bg-black overflow-auto">
+        <GameRoomPanel
+          room={gameRoom}
+          canHost={emulatorState.isRunning}
+          onHidePanel={null}
+        />
+      </div>
+    )}
     <div className="w-full h-full flex flex-col bg-gray-600">
       {/* Input Status Bar */}
       <div className="flex items-center justify-between px-2 py-1 bg-gray-700 border-b border-gray-600">
@@ -292,15 +303,15 @@ function EmulatorScreen() {
           </div>
         )}
 
-        {/* Game Room (Host-Client streaming) */}
-        {gameRoomVisible && (
+        {/* Game Room (Host-Client streaming) - host panel stays inside the console screen */}
+        {gameRoomVisible && !isGuestStreaming && (
           <div className="absolute inset-0 z-30 bg-gray-900/95 backdrop-blur-sm overflow-y-auto">
             <div className="min-h-full flex items-center justify-center p-4">
               <div className="w-full max-w-xl bg-gray-800 rounded-lg border-2 border-ps1-gray shadow-2xl">
                 <GameRoomPanel
                   room={gameRoom}
                   canHost={emulatorState.isRunning}
-                  onHidePanel={isGuestStreaming ? null : hideGameRoomPanel}
+                  onHidePanel={hideGameRoomPanel}
                 />
               </div>
             </div>
@@ -699,6 +710,7 @@ function EmulatorScreen() {
         </div>
       </div>
     </div>
+    </>
   )
 }
 
