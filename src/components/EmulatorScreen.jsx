@@ -93,7 +93,6 @@ function EmulatorScreen() {
 
   const [biosFile, setBiosFile] = useState(null)
   const [romFiles, setRomFiles] = useState([])
-  const [step, setStep] = useState('bios')
   const [showGameRoom, setShowGameRoom] = useState(false)
 
   const {
@@ -154,7 +153,6 @@ function EmulatorScreen() {
       const isValid = fileName.endsWith('.bin') || fileName.endsWith('.rom')
       if (isValid) {
         setBiosFile(file)
-        setStep('rom')
       }
     }
   }, [])
@@ -171,7 +169,6 @@ function EmulatorScreen() {
         }
       }
       setRomFiles(files)
-      setStep('ready')
     }
   }, [])
 
@@ -185,7 +182,6 @@ function EmulatorScreen() {
     stopEmulator()
     setBiosFile(null)
     setRomFiles([])
-    setStep('bios')
   }, [stopEmulator])
 
   const triggerBiosInput = useCallback(() => {
@@ -337,8 +333,9 @@ function EmulatorScreen() {
               </div>
               <ActionButton onClick={resetEmulator}>RESET</ActionButton>
             </div>
-          ) : step === 'bios' ? (
-            /* BIOS Selection - Medium Gray Memory Card Style */
+          ) : (
+            /* Unified loader screen: wrench + LOAD BIOS on the left,
+               disc + LOAD GAME on the right, START/RESET in the middle. */
             <div className="w-full h-full flex flex-col p-3" style={{ backgroundColor: '#606060' }}>
               {/* Title bar */}
               <div className="text-center mb-3">
@@ -349,7 +346,7 @@ function EmulatorScreen() {
 
               {/* Grid area */}
               <div className="flex-1 grid grid-cols-12 grid-rows-8 gap-0 mb-3">
-                {/* Left side - Wrench (BIOS / settings slot) */}
+                {/* Left column - Wrench (BIOS slot) */}
                 <div className="col-span-4 row-span-8 flex flex-col">
                   <div className="bg-gray-700 px-2 py-1 border border-gray-600 mb-1">
                     <SlotHeader slot="1" color="#22c55e" />
@@ -357,129 +354,35 @@ function EmulatorScreen() {
                   <div className="flex-1 flex items-center justify-center bg-gray-600 border border-gray-500">
                     <span className="text-3xl">🔧</span>
                   </div>
+                  <div className="mt-2 flex flex-col items-center gap-1">
+                    <StartButton onClick={triggerBiosInput}>
+                      {biosFile ? 'CHANGE BIOS' : 'LOAD BIOS'}
+                    </StartButton>
+                    <div
+                      className="font-retro text-[7px] text-gray-300 text-center truncate w-full px-1"
+                      title={biosFile?.name || ''}
+                    >
+                      {biosFile?.name || '—'}
+                    </div>
+                  </div>
                 </div>
 
-                {/* Center - Menu options */}
+                {/* Center column - START / RESET */}
                 <div className="col-span-4 row-span-8 flex flex-col items-center justify-center gap-3">
-                  <StartButton onClick={triggerBiosInput}>
-                    LOAD BIOS
-                  </StartButton>
-                </div>
-
-                {/* Right side - Disc (game slot) */}
-                <div className="col-span-4 row-span-8 flex flex-col">
-                  <div className="bg-gray-700 px-2 py-1 border border-gray-600 mb-1">
-                    <SlotHeader slot="2" color="#eab308" />
-                  </div>
-                  <div className="flex-1 flex items-center justify-center bg-gray-600 border border-gray-500">
-                    <span className="text-3xl">💿</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom - Single START button */}
-              <div className="flex items-center justify-center gap-3">
-                <StartButton onClick={triggerBiosInput}>
-                  START
-                </StartButton>
-              </div>
-
-              {/* BIOS hint */}
-              <div className="text-center mt-2">
-                <div className="font-retro text-[7px] text-gray-500">
-                  Accepts: scph5501.bin, scph7001.bin, scph1001.bin
-                </div>
-              </div>
-            </div>
-          ) : step === 'rom' ? (
-            /* ROM Selection */
-            <div className="w-full h-full flex flex-col p-3" style={{ backgroundColor: '#606060' }}>
-              {/* Title */}
-              <div className="text-center mb-3">
-                <div className="font-retro text-[10px] text-gray-300">
-                  MEMORY CARD MANAGER
-                </div>
-              </div>
-
-              {/* Grid */}
-              <div className="flex-1 grid grid-cols-12 grid-rows-8 gap-0 mb-3">
-                {/* Slot 1 - Wrench (settings) */}
-                <div className="col-span-4 row-span-8 flex flex-col">
-                  <div className="bg-gray-700 px-2 py-1 border border-gray-600 mb-1">
-                    <SlotHeader slot="1" color="#22c55e" />
-                  </div>
-                  <div className="flex-1 flex items-center justify-center bg-gray-600 border border-gray-500">
-                    <span className="text-3xl">🔧</span>
-                  </div>
-                </div>
-
-                {/* Center - ROM options */}
-                <div className="col-span-4 row-span-8 flex flex-col items-center justify-center gap-3">
-                  <StartButton onClick={triggerRomInput}>
-                    LOAD GAME
-                  </StartButton>
-                </div>
-
-                {/* Slot 2 - Disc (game) */}
-                <div className="col-span-4 row-span-8 flex flex-col">
-                  <div className="bg-gray-700 px-2 py-1 border border-gray-600 mb-1">
-                    <SlotHeader slot="2" color="#eab308" />
-                  </div>
-                  <div className="flex-1 flex items-center justify-center bg-gray-600 border border-gray-500">
-                    <span className="text-3xl">💿</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom */}
-              <div className="flex items-center justify-center gap-3">
-                <StartButton onClick={triggerRomInput}>
-                  START
-                </StartButton>
-              </div>
-
-              <div className="text-center mt-2">
-                <div className="font-retro text-[7px] text-gray-400">
-                  {biosFile?.name}
-                </div>
-                <div className="font-retro text-[7px] text-gray-500 mt-1">
-                  Accepts: .bin, .cue, .iso, .img, .chd, .pbp
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Ready to Start - Show loaded files */
-            <div className="w-full h-full flex flex-col p-3" style={{ backgroundColor: '#606060' }}>
-              {/* Title */}
-              <div className="text-center mb-3">
-                <div className="font-retro text-[10px] text-gray-300">
-                  MEMORY CARD MANAGER
-                </div>
-              </div>
-
-              {/* Grid */}
-              <div className="flex-1 grid grid-cols-12 grid-rows-8 gap-0 mb-3">
-                {/* Slot 1 - Wrench (settings) */}
-                <div className="col-span-4 row-span-8 flex flex-col">
-                  <div className="bg-gray-700 px-2 py-1 border border-gray-600 mb-1">
-                    <SlotHeader slot="1" color="#22c55e" />
-                  </div>
-                  <div className="flex-1 flex items-center justify-center bg-gray-600 border border-gray-500">
-                    <span className="text-3xl">🔧</span>
-                  </div>
-                </div>
-
-                {/* Center - Start option */}
-                <div className="col-span-4 row-span-8 flex flex-col items-center justify-center gap-3">
-                  <StartButton onClick={startEmulator}>
+                  <StartButton
+                    onClick={startEmulator}
+                    className={biosFile && romFiles.length > 0 ? '' : 'opacity-40 pointer-events-none'}
+                  >
                     START GAME
                   </StartButton>
-                  <ActionButton onClick={triggerRomInput}>
-                    ADD FILES
-                  </ActionButton>
+                  {(biosFile || romFiles.length > 0) && (
+                    <ActionButton onClick={resetEmulator}>
+                      RESET
+                    </ActionButton>
+                  )}
                 </div>
 
-                {/* Slot 2 - Disc (game) */}
+                {/* Right column - Disc (game slot) */}
                 <div className="col-span-4 row-span-8 flex flex-col">
                   <div className="bg-gray-700 px-2 py-1 border border-gray-600 mb-1">
                     <SlotHeader slot="2" color="#eab308" />
@@ -487,23 +390,27 @@ function EmulatorScreen() {
                   <div className="flex-1 flex items-center justify-center bg-gray-600 border border-gray-500">
                     <span className="text-3xl">💿</span>
                   </div>
+                  <div className="mt-2 flex flex-col items-center gap-1">
+                    <StartButton
+                      onClick={triggerRomInput}
+                      className={biosFile ? '' : 'opacity-40 pointer-events-none'}
+                    >
+                      {romFiles.length > 0 ? 'CHANGE GAME' : 'LOAD GAME'}
+                    </StartButton>
+                    <div
+                      className="font-retro text-[7px] text-gray-300 text-center truncate w-full px-1"
+                      title={romFiles[0]?.name || ''}
+                    >
+                      {romFiles[0]?.name || '—'}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Bottom action buttons */}
-              <div className="flex items-center justify-center gap-3">
-                <StartButton onClick={startEmulator}>
-                  START
-                </StartButton>
-                <ActionButton onClick={resetEmulator}>
-                  RESET
-                </ActionButton>
-              </div>
-
-              {/* Game name display */}
-              <div className="bg-gray-700 px-3 py-2 mt-2 border border-gray-600">
-                <div className="font-retro text-[9px] text-gray-200 text-center truncate">
-                  {romFiles.length > 0 ? romFiles[0].name.replace(/\.(cue|bin|iso|img|chd|pbp)$/i, '') : 'No game loaded'}
+              {/* Hints */}
+              <div className="text-center mt-2">
+                <div className="font-retro text-[7px] text-gray-500">
+                  BIOS: scph5501.bin / scph7001.bin / scph1001.bin · GAME: .bin, .cue, .iso, .img, .chd, .pbp
                 </div>
               </div>
             </div>
