@@ -118,9 +118,18 @@ function EmulatorScreen() {
   const multiplayer = useMultiplayer()
   const gameRoom = useGameRoom()
 
-  // Guests never load a local emulator; always show the streaming panel.
+  // Guests never load a local emulator: their panel must stay on screen.
+  // The host can toggle the panel on/off without closing the room.
   const isGuestStreaming = gameRoom.isGuest && gameRoom.roomCode
-  const gameRoomVisible = showGameRoom || gameRoom.role !== 'idle'
+  const gameRoomVisible = showGameRoom || isGuestStreaming
+  const gameRoomActive = gameRoom.role !== 'idle'
+
+  // Keep the guest panel visible automatically while the guest has a room.
+  useEffect(() => {
+    if (isGuestStreaming && !showGameRoom) setShowGameRoom(true)
+  }, [isGuestStreaming, showGameRoom])
+
+  const hideGameRoomPanel = useCallback(() => setShowGameRoom(false), [])
 
   // Detect multiple connected gamepads
   const [connectedPads, setConnectedPads] = useState([])
@@ -236,17 +245,30 @@ function EmulatorScreen() {
             {showMultiplayer ? 'MP: ON' : 'MP: OFF'}
           </button>
           <button
-            onClick={() => setShowGameRoom((v) => !v)}
+            onClick={() => {
+              // Guests cannot hide their own panel (the video is the whole UI).
+              if (isGuestStreaming) return
+              setShowGameRoom((v) => !v)
+            }}
+            disabled={isGuestStreaming}
             className={`
               px-3 py-1 font-retro text-[8px] rounded transition-all
-              ${gameRoomVisible
-                ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+              ${gameRoomActive
+                ? 'bg-green-600 hover:bg-green-500 text-white'
+                : gameRoomVisible
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                  : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
               }
             `}
-            title="Stream this game to a friend (or join theirs)"
+            title={
+              gameRoomActive && !gameRoomVisible
+                ? 'Room is still running. Click to show panel.'
+                : 'Stream this game to a friend (or join theirs)'
+            }
           >
-            {gameRoomVisible ? 'ROOM: ON' : 'ROOM: OFF'}
+            {gameRoomActive
+              ? (gameRoom.isHost ? 'HOSTING' : 'IN ROOM')
+              : gameRoomVisible ? 'ROOM: ON' : 'ROOM: OFF'}
             {gameRoom.isHost && gameRoom.guestCount > 0 && (
               <span className="ml-1 text-[7px]">·{gameRoom.guestCount}</span>
             )}
@@ -278,6 +300,7 @@ function EmulatorScreen() {
                 <GameRoomPanel
                   room={gameRoom}
                   canHost={emulatorState.isRunning}
+                  onHidePanel={isGuestStreaming ? null : hideGameRoomPanel}
                 />
               </div>
             </div>

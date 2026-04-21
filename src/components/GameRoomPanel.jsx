@@ -48,7 +48,7 @@ function LatencyBadge({ latency }) {
   )
 }
 
-function HostView({ room }) {
+function HostView({ room, onHidePanel }) {
   const {
     status,
     roomCode,
@@ -97,6 +97,15 @@ function HostView({ room }) {
         <div className="font-retro text-[7px] text-gray-400">YOU ARE THE HOST</div>
         <div className="flex items-center gap-2">
           <StatusBadge status={status} isHost guestCount={guestCount} />
+          {onHidePanel && (
+            <button
+              onClick={onHidePanel}
+              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white font-retro text-[8px] rounded"
+              title="Hide this panel without closing the room"
+            >
+              HIDE PANEL
+            </button>
+          )}
         </div>
       </div>
 
@@ -128,16 +137,27 @@ function HostView({ room }) {
         </div>
         <div className="mt-2 font-retro text-[7px] text-gray-400 leading-relaxed">
           Guests see your game and control Player 2. Your game keeps running locally
-          even if no one is connected.
+          even if no one is connected. You can hide this panel to play normally —
+          the room stays open in the background.
         </div>
       </div>
 
-      <button
-        onClick={leaveRoom}
-        className="w-full py-3 px-4 bg-red-700 hover:bg-red-600 text-white font-retro text-[9px] rounded"
-      >
-        CLOSE ROOM
-      </button>
+      <div className="flex gap-2">
+        {onHidePanel && (
+          <button
+            onClick={onHidePanel}
+            className="flex-1 py-3 px-4 bg-gray-700 hover:bg-gray-600 text-white font-retro text-[9px] rounded"
+          >
+            HIDE PANEL
+          </button>
+        )}
+        <button
+          onClick={leaveRoom}
+          className={`${onHidePanel ? 'flex-1' : 'w-full'} py-3 px-4 bg-red-700 hover:bg-red-600 text-white font-retro text-[9px] rounded`}
+        >
+          CLOSE ROOM
+        </button>
+      </div>
     </div>
   )
 }
@@ -327,18 +347,28 @@ function GuestView({ room }) {
   )
 }
 
-export default function GameRoomPanel({ room, canHost }) {
+export default function GameRoomPanel({ room, canHost, onHidePanel }) {
   const { role, createRoom, status, error } = room
 
   // Entry screen: pick Host or Guest.
   if (role === 'idle') {
     return (
       <div className="w-full p-4">
-        <div className="mb-6 text-center">
-          <h2 className="font-retro text-xs text-ps1-text mb-2">GAME ROOM</h2>
-          <p className="font-retro text-[7px] text-gray-400">
-            Stream your game to a friend or join theirs.
-          </p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="font-retro text-xs text-ps1-text mb-1">GAME ROOM</h2>
+            <p className="font-retro text-[7px] text-gray-400">
+              Stream your game to a friend or join theirs.
+            </p>
+          </div>
+          {onHidePanel && (
+            <button
+              onClick={onHidePanel}
+              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white font-retro text-[8px] rounded"
+            >
+              CLOSE
+            </button>
+          )}
         </div>
 
         {error && (
@@ -370,7 +400,7 @@ export default function GameRoomPanel({ room, canHost }) {
   }
 
   if (role === 'hosting') {
-    return <HostView room={room} />
+    return <HostView room={room} onHidePanel={onHidePanel} />
   }
 
   return <GuestView room={room} />
