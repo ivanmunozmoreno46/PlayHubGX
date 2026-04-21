@@ -19,11 +19,13 @@ import Peer from 'peerjs'
 
 const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const PEER_ID_PREFIX = 'playhubgx-room-'
-const TARGET_FPS = 30
+const TARGET_FPS = 60
 const PING_INTERVAL_MS = 2000
-// Prioritise latency over bandwidth: cap the video bitrate so the encoder
-// doesn't buffer up large frames and keep the framerate stable.
-const MAX_VIDEO_BITRATE = 2_000_000 // 2 Mbps
+// The PSX canvas is small (~320x240 to 640x480) so bitrate needs to be high
+// enough that the encoder doesn't blur fast-moving pixels after upscaling on
+// the guest. 10 Mbps is a good trade-off: still well below a LAN's capacity
+// but high enough that the encoder keeps the native pixels sharp.
+const MAX_VIDEO_BITRATE = 10_000_000 // 10 Mbps
 const PLAYER_SLOT = 1 // 0 = P1 (local), 1 = P2 (remote guest)
 
 // Keyboard code -> libretro RetroPad button id.
@@ -85,8 +87,16 @@ async function tuneVideoSenderForLatency(call) {
       maxFramerate: TARGET_FPS,
       networkPriority: 'high',
       priority: 'high',
+      // Do not downscale the (already small) PSX canvas on the encoder side.
+      scaleResolutionDownBy: 1,
     }))
     await videoSender.setParameters(params)
+
+    // Hint the encoder that we prioritise preserving pixel detail (crisp
+    // pixels from the emulator canvas) rather than smooth motion blur.
+    if (videoSender.track) {
+      try { videoSender.track.contentHint = 'detail' } catch (_) { /* noop */ }
+    }
   } catch (err) {
     // Non-fatal: some browsers don't support setParameters fully.
     console.warn('[GameRoom] Could not tune video sender:', err)
@@ -143,6 +153,12 @@ export function useGameRoom() {
       // Fallback: video-only capture.
       stream = ejs.canvas.captureStream(TARGET_FPS)
     }
+
+    // Mark every video track as 'detail' content so every RTCPeerConnection we
+    // attach this stream to biases towards preserving pixel detail.
+    try {
+      stream.getVideoTracks().forEach((t) => { t.contentHint = 'detail' })
+    } catch (_) { /* noop */ }
 
     localStreamRef.current = stream
     return stream

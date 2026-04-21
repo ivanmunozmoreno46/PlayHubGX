@@ -345,6 +345,10 @@ function GuestView({ room }) {
             playsInline
             muted={isMuted}
             className="w-full h-full object-contain bg-black"
+            // PSX native resolution is tiny (~320x240). Keep pixels crisp when
+            // the <video> is upscaled instead of letting the browser apply a
+            // blurry bilinear filter.
+            style={{ imageRendering: 'pixelated' }}
           />
         </div>
 
