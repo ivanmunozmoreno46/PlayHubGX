@@ -86,14 +86,6 @@ function SlotHeader({ slot, color }) {
   )
 }
 
-// Game icon placeholder for memory card slots
-function GameIcon({ icon }) {
-  const icons = ['💾', '🎮', '', '', '🎯', '', '🏆', '⭐', '']
-  return (
-    <span className="text-lg">{icons[icon % icons.length]}</span>
-  )
-}
-
 function EmulatorScreen() {
   const containerRef = useRef(null)
   const biosInputRef = useRef(null)
@@ -181,15 +173,6 @@ function EmulatorScreen() {
       setRomFiles(files)
       setStep('ready')
     }
-  }, [])
-
-  const removeRomFile = useCallback((index) => {
-    setRomFiles(prev => {
-      const newFiles = [...prev]
-      newFiles.splice(index, 1)
-      if (newFiles.length === 0) setStep('rom')
-      return newFiles
-    })
   }, [])
 
   const startEmulator = useCallback(() => {
@@ -420,13 +403,13 @@ function EmulatorScreen() {
 
               {/* Grid */}
               <div className="flex-1 grid grid-cols-12 grid-rows-8 gap-0 mb-3">
-                {/* Slot 1 - BIOS loaded */}
+                {/* Slot 1 - Wrench (settings) */}
                 <div className="col-span-4 row-span-8 flex flex-col">
                   <div className="bg-gray-700 px-2 py-1 border border-gray-600 mb-1">
                     <SlotHeader slot="1" color="#22c55e" />
                   </div>
                   <div className="flex-1 flex items-center justify-center bg-gray-600 border border-gray-500">
-                    <span className="text-3xl">💿</span>
+                    <span className="text-3xl">🔧</span>
                   </div>
                 </div>
 
@@ -437,15 +420,13 @@ function EmulatorScreen() {
                   </StartButton>
                 </div>
 
-                {/* Slot 2 - Empty */}
+                {/* Slot 2 - Disc (game) */}
                 <div className="col-span-4 row-span-8 flex flex-col">
                   <div className="bg-gray-700 px-2 py-1 border border-gray-600 mb-1">
                     <SlotHeader slot="2" color="#eab308" />
                   </div>
-                  <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-0">
-                    {Array.from({ length: 9 }).map((_, i) => (
-                      <GridCell key={i} className="bg-gray-600 border-gray-500" />
-                    ))}
+                  <div className="flex-1 flex items-center justify-center bg-gray-600 border border-gray-500">
+                    <span className="text-3xl">💿</span>
                   </div>
                 </div>
               </div>
@@ -478,31 +459,13 @@ function EmulatorScreen() {
 
               {/* Grid */}
               <div className="flex-1 grid grid-cols-12 grid-rows-8 gap-0 mb-3">
-                {/* Slot 1 - Game files */}
+                {/* Slot 1 - Wrench (settings) */}
                 <div className="col-span-4 row-span-8 flex flex-col">
                   <div className="bg-gray-700 px-2 py-1 border border-gray-600 mb-1">
                     <SlotHeader slot="1" color="#22c55e" />
                   </div>
-                  <div className="flex-1 grid grid-cols-3 gap-0 overflow-y-auto">
-                    {romFiles.map((file, i) => (
-                      <div
-                        key={i}
-                        className="flex flex-col items-center justify-center bg-gray-600 border border-gray-500 aspect-square relative group cursor-pointer"
-                        onClick={() => removeRomFile(i)}
-                        title={`Click to remove: ${file.name}`}
-                      >
-                        <GameIcon icon={i} />
-                        <div className="absolute bottom-0 left-0 right-0 bg-black/40 px-1 py-0.5">
-                          <div className="text-[5px] text-gray-300 truncate">
-                            {file.name.substring(0, 6)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {/* Fill empty slots */}
-                    {Array.from({ length: Math.max(0, 9 - romFiles.length) }).map((_, i) => (
-                      <GridCell key={`empty-${i}`} className="bg-gray-600 border-gray-500" />
-                    ))}
+                  <div className="flex-1 flex items-center justify-center bg-gray-600 border border-gray-500">
+                    <span className="text-3xl">🔧</span>
                   </div>
                 </div>
 
@@ -516,15 +479,13 @@ function EmulatorScreen() {
                   </ActionButton>
                 </div>
 
-                {/* Slot 2 - Empty */}
+                {/* Slot 2 - Disc (game) */}
                 <div className="col-span-4 row-span-8 flex flex-col">
                   <div className="bg-gray-700 px-2 py-1 border border-gray-600 mb-1">
                     <SlotHeader slot="2" color="#eab308" />
                   </div>
-                  <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-0">
-                    {Array.from({ length: 9 }).map((_, i) => (
-                      <GridCell key={i} className="bg-gray-600 border-gray-500" />
-                    ))}
+                  <div className="flex-1 flex items-center justify-center bg-gray-600 border border-gray-500">
+                    <span className="text-3xl">💿</span>
                   </div>
                 </div>
               </div>
