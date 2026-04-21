@@ -2,8 +2,10 @@ import { useRef, useState, useCallback, useEffect } from 'react'
 import { useEmulator } from '../hooks/useEmulator'
 import { useGamepad } from '../hooks/useGamepad'
 import { useMultiplayer } from '../hooks/useMultiplayer'
+import { useGameRoom } from '../hooks/useGameRoom'
 import GamepadIndicator from './GamepadIndicator'
 import MultiplayerLobby from './MultiplayerLobby'
+import GameRoomPanel from './GameRoomPanel'
 
 /**
  * PS1 Memory Card Manager Style - Light Gray Grid Theme
@@ -103,6 +105,7 @@ function EmulatorScreen() {
   const [romFiles, setRomFiles] = useState([])
   const [step, setStep] = useState('bios')
   const [showMultiplayer, setShowMultiplayer] = useState(false)
+  const [showGameRoom, setShowGameRoom] = useState(false)
 
   const {
     emulatorState,
@@ -113,6 +116,20 @@ function EmulatorScreen() {
   const { gamepadState } = useGamepad()
 
   const multiplayer = useMultiplayer()
+  const gameRoom = useGameRoom()
+
+  // Guests never load a local emulator: their panel must stay on screen.
+  // The host can toggle the panel on/off without closing the room.
+  const isGuestStreaming = gameRoom.isGuest && gameRoom.roomCode
+  const gameRoomVisible = showGameRoom || isGuestStreaming
+  const gameRoomActive = gameRoom.role !== 'idle'
+
+  // Keep the guest panel visible automatically while the guest has a room.
+  useEffect(() => {
+    if (isGuestStreaming && !showGameRoom) setShowGameRoom(true)
+  }, [isGuestStreaming, showGameRoom])
+
+  const hideGameRoomPanel = useCallback(() => setShowGameRoom(false), [])
 
   // Detect multiple connected gamepads
   const [connectedPads, setConnectedPads] = useState([])
@@ -201,6 +218,17 @@ function EmulatorScreen() {
   }, [])
 
   return (
+    <>
+    {/* Guest streaming: escape the 4:3 console frame and take over the whole viewport */}
+    {isGuestStreaming && (
+      <div className="fixed inset-0 z-50 bg-black overflow-auto">
+        <GameRoomPanel
+          room={gameRoom}
+          canHost={emulatorState.isRunning}
+          onHidePanel={null}
+        />
+      </div>
+    )}
     <div className="w-full h-full flex flex-col bg-gray-600">
       {/* Input Status Bar */}
       <div className="flex items-center justify-between px-2 py-1 bg-gray-700 border-b border-gray-600">
@@ -214,28 +242,77 @@ function EmulatorScreen() {
             {gamepadState.isConnected ? 'PAD' : 'NO PAD'}
           </span>
         </div>
-        <button
-          onClick={() => setShowMultiplayer(!showMultiplayer)}
-          className={`
-            px-3 py-1 font-retro text-[8px] rounded transition-all
-            ${showMultiplayer
-              ? 'bg-green-600 hover:bg-green-500 text-white'
-              : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowMultiplayer(!showMultiplayer)}
+            className={`
+              px-3 py-1 font-retro text-[8px] rounded transition-all
+              ${showMultiplayer
+                ? 'bg-green-600 hover:bg-green-500 text-white'
+                : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+              }
+            `}
+          >
+            {showMultiplayer ? 'MP: ON' : 'MP: OFF'}
+          </button>
+          <button
+            onClick={() => {
+              // Guests cannot hide their own panel (the video is the whole UI).
+              if (isGuestStreaming) return
+              setShowGameRoom((v) => !v)
+            }}
+            disabled={isGuestStreaming}
+            className={`
+              px-3 py-1 font-retro text-[8px] rounded transition-all
+              ${gameRoomActive
+                ? 'bg-green-600 hover:bg-green-500 text-white'
+                : gameRoomVisible
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                  : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+              }
+            `}
+            title={
+              gameRoomActive && !gameRoomVisible
+                ? 'Room is still running. Click to show panel.'
+                : 'Stream this game to a friend (or join theirs)'
             }
-          `}
-        >
-          {showMultiplayer ? 'MP: ON' : 'MP: OFF'}
-        </button>
+          >
+            {gameRoomActive
+              ? (gameRoom.isHost ? 'HOSTING' : 'IN ROOM')
+              : gameRoomVisible ? 'ROOM: ON' : 'ROOM: OFF'}
+            {gameRoom.isHost && gameRoom.guestCount > 0 && (
+              <span className="ml-1 text-[7px]">·{gameRoom.guestCount}</span>
+            )}
+            {gameRoom.isGuest && gameRoom.latency != null && (
+              <span className="ml-1 text-[7px]">{gameRoom.latency}ms</span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Main Content Area - PS1 Memory Card Manager Style */}
       <div className="relative w-full flex-1" style={{ aspectRatio: '4/3' }}>
         {/* Multiplayer Panel */}
-        {showMultiplayer && (
+        {showMultiplayer && !isGuestStreaming && (
           <div className="absolute inset-0 z-20 bg-gray-700/95 backdrop-blur-sm overflow-y-auto">
             <div className="min-h-full flex items-center justify-center p-4">
               <div className="w-full max-w-md bg-gray-800 rounded-lg border-2 border-ps1-gray shadow-2xl">
                 <MultiplayerLobby multiplayer={multiplayer} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Game Room (Host-Client streaming) - host panel stays inside the console screen */}
+        {gameRoomVisible && !isGuestStreaming && (
+          <div className="absolute inset-0 z-30 bg-gray-900/95 backdrop-blur-sm overflow-y-auto">
+            <div className="min-h-full flex items-center justify-center p-4">
+              <div className="w-full max-w-xl bg-gray-800 rounded-lg border-2 border-ps1-gray shadow-2xl">
+                <GameRoomPanel
+                  room={gameRoom}
+                  canHost={emulatorState.isRunning}
+                  onHidePanel={hideGameRoomPanel}
+                />
               </div>
             </div>
           </div>
@@ -633,6 +710,7 @@ function EmulatorScreen() {
         </div>
       </div>
     </div>
+    </>
   )
 }
 
