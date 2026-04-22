@@ -8,14 +8,68 @@
   box-sizing: border-box;
 }
 
+html, body {
+  height: 100%;
+}
+
 body {
-  @apply bg-ps1-dark font-sans;
+  @apply bg-ps1-bios-bg-deep font-ps text-ps1-text;
+  /* Default image rendering is pixelated for the emulator canvas; the UI
+     overrides this where it would otherwise blur text. */
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
 }
 
-/* PS1 Circular Button Styles */
+/* ---------- BIOS-style ambient background ----------
+ * Subtle deep-navy gradient with a faint rotating/diagonal blue sheen,
+ * reminiscent of the PS1 BIOS "Memory Card" menu background without
+ * getting in the way of content.
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(0, 140, 220, 0.18), transparent 55%),
+    radial-gradient(ellipse at 80% 90%, rgba(120, 0, 200, 0.10), transparent 60%),
+    linear-gradient(180deg, #0a0c24 0%, #05061a 100%);
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+}
+
+/* ---------- Typography refinements ---------- */
+.font-retro {
+  /* Press Start 2P is naturally pixelated; disable subpixel AA for crisp edges. */
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+.font-ps, .font-display {
+  /* Chakra Petch looks best with standard AA and slight tracking. */
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.02em;
+}
+.font-lcd {
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.04em;
+}
+
+.glow-cyan {
+  text-shadow:
+    0 0 6px rgba(0, 204, 255, 0.55),
+    0 0 14px rgba(0, 204, 255, 0.30);
+}
+.glow-yellow {
+  text-shadow: 0 0 8px rgba(255, 204, 51, 0.55);
+}
+
+/* ---------- PS1 circular power button ---------- */
 .ps1-circle-btn {
   border-radius: 50%;
   transition: all 0.15s ease;
@@ -26,72 +80,103 @@ body {
   box-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
 }
 
-/* LED Blink Animation */
+/* ---------- LED blink ---------- */
 @keyframes led-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
+.led-blink { animation: led-blink 1s infinite; }
 
-.led-blink {
-  animation: led-blink 1s infinite;
-}
-
-/* Cursor Blink Animation */
 @keyframes cursor-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
+.cursor-blink { animation: cursor-blink 0.5s infinite; }
 
-.cursor-blink {
-  animation: cursor-blink 0.5s infinite;
-}
+/* ---------- CRT Overlay ----------
+ * Full-screen scanlines + vignette + subtle chromatic fringe, rendered as
+ * a non-interactive overlay on top of everything. Toggled on/off by the
+ * `.crt-on` class on <html> (see CRTOverlay.jsx). The overlay itself lives
+ * in React so it can host the curvature tint; these selectors only drive
+ * visibility.
+ */
+html.crt-off .crt-overlay { display: none; }
 
-/* CRT Scanlines Effect */
-.crt-scanlines::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+.crt-scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
   background: repeating-linear-gradient(
     0deg,
-    rgba(0, 0, 0, 0.15),
-    rgba(0, 0, 0, 0.15) 1px,
+    rgba(0, 0, 0, 0.22),
+    rgba(0, 0, 0, 0.22) 1px,
     transparent 1px,
-    transparent 2px
+    transparent 3px
   );
-  pointer-events: none;
+  mix-blend-mode: multiply;
 }
 
-/* CRT Screen Flicker */
+.crt-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 101;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 55%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+
+.crt-fringe {
+  /* Very subtle chromatic aberration */
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 102;
+  box-shadow:
+    inset  2px 0 0 rgba(255, 40, 40, 0.04),
+    inset -2px 0 0 rgba(40, 200, 255, 0.04);
+}
+
 @keyframes flicker {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.98; }
+  50% { opacity: 0.985; }
 }
+.crt-flicker { animation: flicker 0.15s infinite; }
 
-.crt-flicker {
-  animation: flicker 0.15s infinite;
-}
-
-/* PS1 Plastic Texture */
+/* ---------- Plastic texture ---------- */
 .ps1-plastic {
   background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23000' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
 }
 
-/* Disc Lid Shadow */
+/* ---------- Disc Lid Shadow ---------- */
 .disc-lid {
-  box-shadow: 
+  box-shadow:
     inset 0 2px 8px rgba(0,0,0,0.15),
     0 4px 12px rgba(0,0,0,0.1),
     inset 0 0 0 2px rgba(255,255,255,0.1);
 }
 
-/* Button Glow Effect */
-.btn-glow-green {
-  text-shadow: 0 0 10px rgba(0,204,102,0.6);
+/* ---------- Button glows ---------- */
+.btn-glow-green { text-shadow: 0 0 10px rgba(0,204,102,0.6); }
+.btn-glow-blue  { text-shadow: 0 0 10px rgba(59,130,246,0.6); }
+.btn-glow-cyan  { text-shadow: 0 0 10px rgba(0, 204, 255, 0.7); }
+
+/* ---------- PS1 loading diamond ---------- */
+.ps1-loader {
+  width: 28px;
+  height: 28px;
+  transform-origin: center;
+  background: linear-gradient(135deg, #00ccff 0%, #7fd8ff 50%, #ffcc33 100%);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  filter: drop-shadow(0 0 8px rgba(0,204,255,0.55));
+  animation: spin-diamond 1.4s ease-in-out infinite;
 }
 
-.btn-glow-blue {
-  text-shadow: 0 0 10px rgba(59,130,246,0.6);
+@keyframes spin-diamond {
+  0%   { transform: rotate(0deg)   scale(1);    }
+  50%  { transform: rotate(180deg) scale(1.08); }
+  100% { transform: rotate(360deg) scale(1);    }
 }

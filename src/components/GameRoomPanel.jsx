@@ -49,8 +49,8 @@ function StatusBadge({ status, isHost, guestCount }) {
   })()
 
   const color = (() => {
-    if (status === 'connected' || (isHost && guestCount > 0)) return 'bg-green-500'
-    if (status === 'waiting' || status === 'connecting') return 'bg-yellow-500'
+    if (status === 'connected' || (isHost && guestCount > 0)) return 'bg-ps1-led-green'
+    if (status === 'waiting' || status === 'connecting') return 'bg-ps1-yellow'
     if (status === 'error') return 'bg-red-500'
     return 'bg-gray-500'
   })()
@@ -58,7 +58,7 @@ function StatusBadge({ status, isHost, guestCount }) {
   return (
     <div className="flex items-center gap-2 px-2 py-1 rounded bg-ps1-dark border border-ps1-gray">
       <span className={`w-2 h-2 rounded-full ${color}`} />
-      <span className="font-retro text-[7px] text-gray-200 tracking-wider">{label}</span>
+      <span className="font-retro text-[7px] text-ps1-ivory tracking-wider">{label}</span>
     </div>
   )
 }
@@ -66,12 +66,12 @@ function StatusBadge({ status, isHost, guestCount }) {
 function LatencyBadge({ latency }) {
   if (latency == null) return null
   const color =
-    latency < 80 ? 'text-green-400'
-    : latency < 180 ? 'text-yellow-400'
-    : 'text-red-400'
+    latency < 80 ? 'text-ps1-led-green'
+    : latency < 180 ? 'text-ps1-yellow'
+    : 'text-ps1-led-red'
   return (
     <div className="flex items-center gap-1 px-2 py-1 rounded bg-ps1-dark border border-ps1-gray">
-      <span className="font-retro text-[7px] text-gray-400">PING</span>
+      <span className="font-retro text-[7px] text-ps1-cyan-soft/70">PING</span>
       <span className={`font-retro text-[8px] ${color}`}>{latency}ms</span>
     </div>
   )
@@ -117,19 +117,19 @@ function HostView({ room, onHidePanel }) {
   return (
     <div className="w-full p-4">
       {error && (
-        <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-300 text-[8px] font-retro">
+        <div className="mb-4 p-3 bg-ps1-led-red/15 border border-ps1-led-red rounded text-ps1-led-red text-[8px] font-retro">
           {error}
         </div>
       )}
 
       <div className="mb-4 flex items-center justify-between">
-        <div className="font-retro text-[7px] text-gray-400">YOU ARE THE HOST</div>
+        <div className="font-retro text-[7px] text-ps1-cyan-soft/70">YOU ARE THE HOST</div>
         <div className="flex items-center gap-2">
           <StatusBadge status={status} isHost guestCount={guestCount} />
           {onHidePanel && (
             <button
               onClick={onHidePanel}
-              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white font-retro text-[8px] rounded"
+              className="px-3 py-1 bg-ps1-bios-panel hover:bg-ps1-bios-panel/70 text-white font-retro text-[8px] rounded"
               title="Hide this panel without closing the room"
             >
               HIDE PANEL
@@ -139,32 +139,32 @@ function HostView({ room, onHidePanel }) {
       </div>
 
       <div className="mb-6 text-center">
-        <div className="font-retro text-[7px] text-gray-400 mb-2">ROOM CODE</div>
+        <div className="font-retro text-[7px] text-ps1-cyan-soft/70 mb-2">ROOM CODE</div>
         <div className="inline-flex items-center gap-2">
-          <div className="px-6 py-3 bg-ps1-dark border-2 border-green-500 rounded">
-            <span className="font-retro text-lg text-green-400 tracking-[0.3em] select-all">
+          <div className="px-6 py-3 bg-ps1-dark border-2 border-ps1-led-green rounded">
+            <span className="font-lcd text-[36px] leading-none text-ps1-led-green tracking-[0.25em] select-all glow-cyan">
               {roomCode}
             </span>
           </div>
           <button
             onClick={handleCopy}
-            className="px-3 py-3 bg-gray-700 hover:bg-gray-600 text-white font-retro text-[8px] rounded"
+            className="px-3 py-3 bg-ps1-bios-panel hover:bg-ps1-bios-panel/70 text-white font-retro text-[8px] rounded"
             title="Copy room code"
           >
             {copied ? 'COPIED' : 'COPY'}
           </button>
         </div>
-        <div className="mt-2 font-retro text-[7px] text-gray-500">
+        <div className="mt-2 font-retro text-[7px] text-ps1-cyan-soft/60">
           Share this code with a friend so they can join as Player 2.
         </div>
       </div>
 
       <div className="mb-6 p-3 bg-ps1-dark rounded border border-ps1-gray">
         <div className="flex items-center justify-between">
-          <div className="font-retro text-[8px] text-gray-200">GUESTS</div>
-          <div className="font-retro text-[10px] text-green-400">{guestCount}</div>
+          <div className="font-retro text-[8px] text-ps1-ivory">GUESTS</div>
+          <div className="font-retro text-[10px] text-ps1-led-green">{guestCount}</div>
         </div>
-        <div className="mt-2 font-retro text-[7px] text-gray-400 leading-relaxed">
+        <div className="mt-2 font-retro text-[7px] text-ps1-cyan-soft/70 leading-relaxed">
           Guests see your game and control Player 2. Your game keeps running locally
           even if no one is connected. You can hide this panel to play normally —
           the room stays open in the background.
@@ -175,14 +175,14 @@ function HostView({ room, onHidePanel }) {
         {onHidePanel && (
           <button
             onClick={onHidePanel}
-            className="flex-1 py-3 px-4 bg-gray-700 hover:bg-gray-600 text-white font-retro text-[9px] rounded"
+            className="flex-1 py-3 px-4 bg-ps1-bios-panel hover:bg-ps1-bios-panel/70 text-white font-retro text-[9px] rounded"
           >
             HIDE PANEL
           </button>
         )}
         <button
           onClick={leaveRoom}
-          className={`${onHidePanel ? 'flex-1' : 'w-full'} py-3 px-4 bg-red-700 hover:bg-red-600 text-white font-retro text-[9px] rounded`}
+          className={`${onHidePanel ? 'flex-1' : 'w-full'} py-3 px-4 bg-ps1-led-red/80 hover:bg-ps1-led-red text-white border border-ps1-led-red font-retro text-[9px] rounded`}
         >
           CLOSE ROOM
         </button>
@@ -423,14 +423,14 @@ function GuestView({ room }) {
     return (
       <div className="w-full p-4">
         {error && (
-          <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-300 text-[8px] font-retro">
+          <div className="mb-4 p-3 bg-ps1-led-red/15 border border-ps1-led-red rounded text-ps1-led-red text-[8px] font-retro">
             {error}
           </div>
         )}
 
         <div className="mb-6 text-center">
-          <h2 className="font-retro text-xs text-ps1-text mb-2">JOIN GAME ROOM</h2>
-          <p className="font-retro text-[7px] text-gray-400">
+          <h2 className="font-ps font-semibold text-[14px] text-ps1-yellow tracking-[0.3em] mb-2 glow-yellow">JOIN GAME ROOM</h2>
+          <p className="font-retro text-[7px] text-ps1-cyan-soft/70">
             Enter the 6-character code shared by the host.
           </p>
         </div>
@@ -442,21 +442,21 @@ function GuestView({ room }) {
             onChange={(e) => setInputCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
             placeholder="ROOM CODE"
             maxLength={6}
-            className="w-full px-4 py-3 bg-ps1-dark border border-ps1-gray text-ps1-text font-retro text-xs tracking-widest text-center rounded focus:outline-none focus:border-blue-500"
+            className="w-full px-4 py-3 bg-ps1-dark border border-ps1-gray text-ps1-text font-retro text-xs tracking-widest text-center rounded focus:outline-none focus:border-ps1-cyan"
           />
           <button
             onClick={() => {
               if (inputCode.length === 6) joinRoom(inputCode)
             }}
             disabled={inputCode.length !== 6}
-            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-retro text-[9px] rounded"
+            className="w-full py-3 px-4 bg-ps1-cyan-deep hover:bg-ps1-cyan disabled:bg-ps1-bios-panel disabled:text-ps1-cyan-soft/40 disabled:cursor-not-allowed text-white border border-ps1-cyan font-retro text-[9px] rounded"
           >
             JOIN ROOM
           </button>
         </div>
 
         <div className="p-3 bg-ps1-dark rounded border border-ps1-gray">
-          <p className="font-retro text-[7px] text-gray-400 leading-relaxed">
+          <p className="font-retro text-[7px] text-ps1-cyan-soft/70 leading-relaxed">
             You will see the host's game streamed to your browser. Your keyboard inputs
             will control Player 2 on the host's console.
           </p>
@@ -469,8 +469,8 @@ function GuestView({ room }) {
     <div className="w-full p-4">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="font-retro text-[7px] text-gray-400">ROOM</div>
-          <div className="font-retro text-[9px] text-green-400 tracking-widest">{roomCode}</div>
+          <div className="font-retro text-[7px] text-ps1-cyan-soft/70">ROOM</div>
+          <div className="font-retro text-[9px] text-ps1-led-green tracking-widest">{roomCode}</div>
         </div>
         <div className="flex items-center gap-2">
           {gamepadName && (
@@ -478,8 +478,8 @@ function GuestView({ room }) {
               className="flex items-center gap-1 px-2 py-1 rounded bg-ps1-dark border border-ps1-gray"
               title={gamepadName}
             >
-              <span className="w-2 h-2 rounded-full bg-green-400" />
-              <span className="font-retro text-[7px] text-gray-200 tracking-wider">
+              <span className="w-2 h-2 rounded-full bg-ps1-led-green" />
+              <span className="font-retro text-[7px] text-ps1-ivory tracking-wider">
                 GAMEPAD
               </span>
             </div>
@@ -490,7 +490,7 @@ function GuestView({ room }) {
       </div>
 
       {error && (
-        <div className="mb-3 p-2 bg-red-900/50 border border-red-500 rounded text-red-300 text-[7px] font-retro">
+        <div className="mb-3 p-2 bg-ps1-led-red/15 border border-ps1-led-red rounded text-ps1-led-red text-[7px] font-retro">
           {error}
         </div>
       )}
@@ -515,7 +515,7 @@ function GuestView({ room }) {
         <div
           ref={inputFocusRef}
           tabIndex={0}
-          className="absolute inset-0 outline-none focus:ring-2 focus:ring-green-500 focus:ring-inset"
+          className="absolute inset-0 outline-none focus:ring-2 focus:ring-ps1-cyan focus:ring-inset"
         >
           <video
             ref={videoRef}
@@ -538,10 +538,10 @@ function GuestView({ room }) {
         {!remoteStream && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/80 pointer-events-none">
             <div className="text-center">
-              <div className="font-retro text-[10px] text-yellow-400 mb-2">
+              <div className="font-retro text-[10px] text-ps1-yellow mb-2">
                 {status === 'connected' ? 'WAITING FOR HOST STREAM' : 'CONNECTING TO HOST'}
               </div>
-              <div className="font-retro text-[7px] text-gray-400">
+              <div className="font-retro text-[7px] text-ps1-cyan-soft/70">
                 The host must have a game running.
               </div>
             </div>
@@ -552,20 +552,20 @@ function GuestView({ room }) {
           <div className="absolute bottom-2 right-2 flex items-center gap-2 z-10">
             <button
               onClick={() => setShowControls(true)}
-              className="px-3 py-1 bg-gray-900/80 hover:bg-gray-800 text-white font-retro text-[8px] rounded border border-gray-600"
+              className="px-3 py-1 bg-ps1-bios-bg-deep/80 hover:bg-ps1-bios-panel text-white font-retro text-[8px] rounded border border-ps1-bios-border"
               title="Configure controls"
             >
               CONTROLS
             </button>
             <button
               onClick={toggleMute}
-              className="px-3 py-1 bg-gray-900/80 hover:bg-gray-800 text-white font-retro text-[8px] rounded border border-gray-600"
+              className="px-3 py-1 bg-ps1-bios-bg-deep/80 hover:bg-ps1-bios-panel text-white font-retro text-[8px] rounded border border-ps1-bios-border"
             >
               {isMuted ? 'UNMUTE' : 'MUTE'}
             </button>
             <button
               onClick={toggleFullscreen}
-              className="px-3 py-1 bg-gray-900/80 hover:bg-gray-800 text-white font-retro text-[8px] rounded border border-gray-600"
+              className="px-3 py-1 bg-ps1-bios-bg-deep/80 hover:bg-ps1-bios-panel text-white font-retro text-[8px] rounded border border-ps1-bios-border"
               title="Toggle fullscreen"
             >
               {isFullscreen ? 'EXIT FULL' : 'FULLSCREEN'}
@@ -575,21 +575,21 @@ function GuestView({ room }) {
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <div className="font-retro text-[7px] text-gray-400 leading-relaxed max-w-[70%]">
+        <div className="font-retro text-[7px] text-ps1-cyan-soft/70 leading-relaxed max-w-[70%]">
           Plug in a USB/Bluetooth gamepad and press any button to activate it, or click
-          the video area to use the keyboard. Press <span className="text-gray-200">CONTROLS</span>
+          the video area to use the keyboard. Press <span className="text-ps1-ivory">CONTROLS</span>
           {' '}below the video to remap any button.
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowControls(true)}
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white font-retro text-[8px] rounded"
+            className="px-3 py-2 bg-ps1-bios-panel hover:bg-ps1-bios-panel/70 text-white font-retro text-[8px] rounded"
           >
             CONTROLS
           </button>
           <button
             onClick={leaveRoom}
-            className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white font-retro text-[8px] rounded"
+            className="px-4 py-2 bg-ps1-led-red/80 hover:bg-ps1-led-red text-white border border-ps1-led-red font-retro text-[8px] rounded"
           >
             LEAVE
           </button>
@@ -616,15 +616,15 @@ export default function GameRoomPanel({ room, canHost, onHidePanel }) {
       <div className="w-full p-4">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="font-retro text-xs text-ps1-text mb-1">GAME ROOM</h2>
-            <p className="font-retro text-[7px] text-gray-400">
+            <h2 className="font-ps font-semibold text-[14px] text-ps1-yellow tracking-[0.3em] mb-1 glow-yellow">GAME ROOM</h2>
+            <p className="font-retro text-[7px] text-ps1-cyan-soft/70">
               Stream your game to a friend or join theirs.
             </p>
           </div>
           {onHidePanel && (
             <button
               onClick={onHidePanel}
-              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white font-retro text-[8px] rounded"
+              className="px-3 py-1 bg-ps1-bios-panel hover:bg-ps1-bios-panel/70 text-white font-retro text-[8px] rounded"
             >
               CLOSE
             </button>
@@ -632,7 +632,7 @@ export default function GameRoomPanel({ room, canHost, onHidePanel }) {
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-300 text-[8px] font-retro">
+          <div className="mb-4 p-3 bg-ps1-led-red/15 border border-ps1-led-red rounded text-ps1-led-red text-[8px] font-retro">
             {error}
           </div>
         )}
@@ -641,12 +641,12 @@ export default function GameRoomPanel({ room, canHost, onHidePanel }) {
           <button
             onClick={createRoom}
             disabled={!canHost || status === 'connecting'}
-            className="w-full py-3 px-4 bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-retro text-[9px] rounded"
+            className="w-full py-3 px-4 bg-ps1-led-green/80 hover:bg-ps1-led-green disabled:bg-ps1-bios-panel disabled:text-ps1-cyan-soft/40 disabled:cursor-not-allowed text-black border border-ps1-led-green font-retro text-[9px] rounded"
           >
             HOST A GAME
           </button>
           {!canHost && (
-            <div className="font-retro text-[7px] text-yellow-400 -mt-2 text-center">
+            <div className="font-retro text-[7px] text-ps1-yellow -mt-2 text-center">
               Start a game first to host a room.
             </div>
           )}
