@@ -254,8 +254,11 @@ function EmulatorScreen() {
         </div>
       </div>
 
-      {/* Main Content Area - PS1 Memory Card Manager Style */}
-      <div className="relative w-full flex-1" style={{ aspectRatio: '4/3' }}>
+      {/* Main Content Area - PS1 Memory Card Manager Style
+       * Aspect ratio is enforced by the parent `ps1-well` container (App.jsx)
+       * so we just fill the available area and let children use min-h-0 to
+       * avoid forcing scroll on tiny viewports. */}
+      <div className="relative w-full flex-1 min-h-0 overflow-hidden">
 
         {/* Game Room (Host-Client streaming) - host panel stays inside the console screen */}
         {gameRoomVisible && !isGuestStreaming && (
