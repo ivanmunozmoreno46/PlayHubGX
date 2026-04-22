@@ -4,6 +4,15 @@ import GamepadIndicator from './components/GamepadIndicator'
 import CRTOverlay from './components/CRTOverlay'
 import { useGamepad } from './hooks/useGamepad'
 
+/**
+ * PS1 console shell.
+ *
+ * The page is styled to read as a physical SCPH-1001-style PlayStation 1
+ * sitting on a desk: light warm gray plastic shell with a dark disc-lid
+ * area at the top, a front face with POWER (red), RESET (black) and OPEN
+ * (gray) buttons, a small PS logo, and a screen "well" cut into the front
+ * that hosts the emulator UI when powered on.
+ */
 function App() {
   const [isPoweredOn, setIsPoweredOn] = useState(false)
 
@@ -14,135 +23,189 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-6">
       <CRTOverlay />
 
-      {/* Main Console Container */}
-      <div className="w-full max-w-4xl relative">
+      {/* Outer plastic shell */}
+      <div className="w-full max-w-5xl relative animate-fade-in">
+        <div className="ps1-shell ps1-plastic-texture rounded-md overflow-hidden">
 
-        {/* Console Body - Deep navy chassis, PS1 BIOS vibe */}
-        <div
-          className="rounded-lg overflow-hidden border border-ps1-bios-border animate-fade-in"
-          style={{
-            backgroundColor: '#111435',
-            boxShadow:
-              '0 12px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(0,204,255,0.12)',
-          }}
-        >
-
-          {/* Top Bar - PS1 Logo + Controls */}
-          <div
-            className="px-6 py-3 flex items-center justify-between border-b border-ps1-bios-border"
-            style={{ backgroundColor: '#0c0e2a' }}
-          >
-            <div className="flex items-center gap-4">
-              {/* PS Logo */}
-              <div className="flex items-center select-none">
-                <span className="font-ps font-bold text-ps1-cross text-2xl glow-cyan">P</span>
-                <span className="font-ps font-bold text-ps1-circle text-2xl">S</span>
+          {/* ---------- Disc lid (top dark plastic slab) ---------- */}
+          <div className="ps1-shell-dark px-6 py-4 border-b border-ps1-plastic-seam flex items-center justify-between">
+            <div className="flex items-center gap-3 select-none">
+              {/* PS logo in the four face-button colours */}
+              <div className="flex items-baseline">
+                <span className="font-ps font-bold text-ps1-cross text-[22px] leading-none drop-shadow-sm">P</span>
+                <span className="font-ps font-bold text-ps1-circle text-[22px] leading-none drop-shadow-sm">S</span>
               </div>
-              <div className="h-5 w-px bg-ps1-bios-border"></div>
-              <span className="font-ps font-semibold text-[13px] text-ps1-cyan-soft tracking-[0.25em] glow-cyan">
+              <div className="h-5 w-px bg-ps1-plastic-seam/80" />
+              <span className="font-ps font-semibold text-[13px] ps1-silkscreen tracking-[0.3em]">
                 PlayHubGX
               </span>
             </div>
 
-            {/* Controls */}
             <div className="flex items-center gap-4">
               <GamepadIndicator
                 isConnected={gamepadState.isConnected}
                 gamepadId={gamepadState.gamepadId}
                 inputSource={gamepadState.isConnected ? 'gamepad' : 'keyboard'}
               />
-
-              {/* Power LED */}
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${isPoweredOn
-                  ? 'bg-ps1-led-green shadow-[0_0_6px_rgba(68,204,102,0.8)]'
-                  : 'bg-ps1-led-red'}`}></div>
-                <span className="font-retro text-[7px] text-ps1-cyan-soft/80">PWR</span>
-              </div>
-
-              {/* Circular Power Button */}
-              <button
-                onClick={handlePowerToggle}
-                className={`
-                  w-14 h-14 rounded-full font-retro text-[8px] transition-all active:scale-95
-                  ${isPoweredOn
-                    ? 'bg-ps1-led-green text-black border-2 border-ps1-led-green'
-                    : 'bg-ps1-bios-panel text-ps1-cyan-soft border-2 border-ps1-bios-border hover:border-ps1-cyan'
-                  }
-                `}
-                style={{
-                  boxShadow: isPoweredOn
-                    ? '0 0 18px rgba(68,204,102,0.6), inset 0 2px 0 rgba(255,255,255,0.3)'
-                    : '0 4px 10px rgba(0,0,0,0.4), inset 0 2px 0 rgba(0,204,255,0.15)',
-                }}
-              >
-                POWER
-              </button>
+              {/* Model label like the original silkscreen on the lid */}
+              <span className="font-retro text-[7px] ps1-silkscreen hidden sm:inline">
+                SCPH-HUB
+              </span>
             </div>
           </div>
 
-          {/* Screen Container - 4:3 Aspect Ratio */}
-          <div className="p-6" style={{ backgroundColor: '#0a0c25' }}>
-            <div className="mx-auto" style={{ maxWidth: '800px' }}>
-              {isPoweredOn ? (
-                <div className="animate-zoom-in">
-                  <EmulatorScreen />
-                </div>
-              ) : (
-                /* Screen Off - dark BIOS-style grid */
-                <div
-                  className="relative w-full overflow-hidden border border-ps1-bios-border rounded-sm animate-fade-in"
-                  style={{
-                    aspectRatio: '4/3',
-                    backgroundColor: '#05061a',
-                    boxShadow: 'inset 0 0 80px rgba(0,0,0,0.8)',
-                  }}
-                >
-                  {/* Faint BIOS grid */}
+          {/* ---------- Screen well (emulator / off-screen) ---------- */}
+          <div className="px-8 py-6 bg-ps1-plastic">
+            <div className="mx-auto" style={{ maxWidth: '820px' }}>
+              <div className="ps1-well rounded-sm p-4">
+                {isPoweredOn ? (
+                  <div className="animate-zoom-in">
+                    <EmulatorScreen />
+                  </div>
+                ) : (
                   <div
-                    className="absolute inset-0 opacity-30"
-                    style={{
-                      backgroundImage:
-                        'linear-gradient(rgba(0,204,255,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(0,204,255,0.12) 1px, transparent 1px)',
-                      backgroundSize: '48px 48px',
-                    }}
-                  />
-
-                  {/* Off screen message */}
-                  <div className="relative z-10 w-full h-full flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="font-ps font-semibold text-ps1-yellow text-2xl tracking-[0.25em] mb-3 glow-yellow">
-                        PlayHubGX
-                      </div>
-                      <div className="font-retro text-[8px] text-ps1-cyan-soft tracking-widest">
-                        PRESS <span className="text-ps1-yellow">POWER</span> TO START
+                    className="relative w-full overflow-hidden animate-fade-in"
+                    style={{ aspectRatio: '4/3' }}
+                  >
+                    {/* Faint inner grid */}
+                    <div
+                      className="absolute inset-0 opacity-25"
+                      style={{
+                        backgroundImage:
+                          'linear-gradient(rgba(255,255,255,0.10) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.10) 1px, transparent 1px)',
+                        backgroundSize: '48px 48px',
+                      }}
+                    />
+                    <div className="relative z-10 w-full h-full flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="font-ps font-semibold text-ps1-ivory text-2xl tracking-[0.25em] mb-3">
+                          PlayHubGX
+                        </div>
+                        <div className="font-retro text-[8px] text-ps1-ivory/70 tracking-widest">
+                          PRESS <span className="text-ps1-power-red-h">POWER</span> TO START
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Bottom Bar */}
-          <div className="px-6 py-2 border-t border-ps1-bios-border" style={{ backgroundColor: '#0c0e2a' }}>
-            <div className="flex items-center justify-between">
-              <div className="font-retro text-[7px] text-ps1-cyan-soft/70">
+          {/* ---------- Front face (POWER / RESET / OPEN row) ---------- */}
+          <div className="ps1-shell-dark border-t border-ps1-plastic-seam/70 px-8 py-4">
+            <div className="flex items-center justify-between gap-6">
+
+              {/* Vents (decorative slats like on the real shell) */}
+              <div className="ps1-vents h-6 flex-1 rounded-sm opacity-70" />
+
+              {/* Buttons row */}
+              <div className="flex items-end gap-6">
+                <FaceButton
+                  color="power"
+                  active={isPoweredOn}
+                  label="POWER"
+                  onClick={handlePowerToggle}
+                />
+                <FaceButton
+                  color="reset"
+                  label="RESET"
+                  onClick={() => isPoweredOn && handlePowerToggle()}
+                />
+                <FaceButton
+                  color="open"
+                  label="OPEN"
+                  onClick={() => { /* cosmetic; disc is abstracted */ }}
+                />
+              </div>
+
+              <div className="ps1-vents h-6 flex-1 rounded-sm opacity-70" />
+            </div>
+          </div>
+
+          {/* ---------- Bottom lip (memory card / controller ports silkscreen) ---------- */}
+          <div className="bg-ps1-plastic-dark border-t border-ps1-plastic-seam px-6 py-2">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <PortSlot label="MEMORY CARD 1" />
+                <PortSlot label="MEMORY CARD 2" />
+              </div>
+              <span className="font-retro text-[7px] ps1-silkscreen">
                 32 BIT RISC CPU
-              </div>
-              <div className="font-retro text-[7px] text-ps1-cyan-soft/70">
-                © PlayHubGX
-              </div>
-              <div className="font-retro text-[7px] text-ps1-cyan-soft/70">
-                SCPH-HUB
+              </span>
+              <div className="flex items-center gap-3">
+                <PortSlot label="CONTROLLER 1" />
+                <PortSlot label="CONTROLLER 2" />
               </div>
             </div>
           </div>
+
         </div>
       </div>
+    </div>
+  )
+}
+
+function FaceButton({ color, active, label, onClick }) {
+  const palette = (() => {
+    switch (color) {
+      case 'power':
+        return {
+          body: active
+            ? 'bg-ps1-power-red-h'
+            : 'bg-ps1-power-red hover:bg-ps1-power-red-h',
+          ring: 'border-ps1-plastic-seam',
+          led: active ? 'bg-ps1-led-green shadow-[0_0_8px_rgba(68,204,102,0.7)]' : 'bg-ps1-led-red',
+          text: 'text-ps1-plastic-light',
+        }
+      case 'reset':
+        return {
+          body: 'bg-ps1-reset-black hover:bg-black',
+          ring: 'border-ps1-plastic-seam',
+          led: 'bg-ps1-led-red/60',
+          text: 'text-ps1-plastic-light',
+        }
+      case 'open':
+      default:
+        return {
+          body: 'bg-ps1-open-gray hover:bg-ps1-plastic-light',
+          ring: 'border-ps1-plastic-seam',
+          led: 'bg-ps1-plastic-dark',
+          text: 'text-ps1-ink',
+        }
+    }
+  })()
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <button
+        type="button"
+        onClick={onClick}
+        className={`
+          w-10 h-10 rounded-full border-2 ${palette.ring} ${palette.body}
+          shadow-[inset_1px_1px_0_rgba(255,255,255,0.25),inset_-1px_-1px_0_rgba(0,0,0,0.35),0_2px_4px_rgba(0,0,0,0.5)]
+          active:translate-y-0.5 active:shadow-inner
+          transition-all
+        `}
+        aria-label={label}
+      >
+        <span className={`block w-1.5 h-1.5 mx-auto rounded-full ${palette.led}`} />
+      </button>
+      <span className={`font-retro text-[7px] tracking-widest ${palette.text} ps1-silkscreen`}>
+        {label}
+      </span>
+    </div>
+  )
+}
+
+function PortSlot({ label }) {
+  return (
+    <div className="flex items-center gap-2" title={label}>
+      <span className="inline-block w-6 h-2 rounded-[1px] bg-ps1-inner border border-ps1-plastic-seam/60" />
+      <span className="font-retro text-[6px] ps1-silkscreen hidden md:inline">{label}</span>
     </div>
   )
 }

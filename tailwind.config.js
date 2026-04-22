@@ -17,26 +17,47 @@ export default {
         'ps1-led-green': '#44cc66',
         'ps1-led-red': '#ff3e6b',
 
-        // --- New authentic PS1 BIOS palette ---
-        // Deep navy backgrounds used in the original "Memory Card Manager".
-        'ps1-bios-bg': '#0b0d2b',
-        'ps1-bios-bg-deep': '#05061a',
-        'ps1-bios-panel': '#1a1e48',
-        'ps1-bios-border': '#2e3470',
-        // Cyan/teal used for selected items and highlights.
-        'ps1-cyan': '#00ccff',
+        // --- Authentic PS1 hardware (SCPH-1001 style) palette ---
+        // Light gray plastic of the console shell.
+        'ps1-plastic':         '#c9c8c2',
+        'ps1-plastic-light':   '#d9d8d2',
+        'ps1-plastic-highlight':'#e8e7e1',
+        'ps1-plastic-dark':    '#9d9c97',
+        'ps1-plastic-shadow':  '#6a6964',
+        'ps1-plastic-seam':    '#3d3c39',
+        // Interior / disc well (almost black).
+        'ps1-inner':       '#1a1a1a',
+        'ps1-inner-deep':  '#0a0a0a',
+        // Text on plastic.
+        'ps1-ink':       '#2b2b2b',
+        'ps1-ink-soft':  '#5a5a58',
+        // Accents used on the physical console.
+        'ps1-power-red':   '#c43234',
+        'ps1-power-red-h': '#e04a4c',
+        'ps1-reset-black': '#2a2a2a',
+        'ps1-open-gray':   '#a8a7a2',
+        // Controller face button colours (used for ✕ ○ □ △).
+        'ps1-cross':    '#6fb4ff', // blue
+        'ps1-circle':   '#ff6b7a', // red/pink
+        'ps1-square':   '#ff7ac9', // magenta
+        'ps1-triangle': '#46e0a6', // green
+        // Screen colours (kept for legacy cyan glow inside runtime canvas).
+        'ps1-cyan':      '#00ccff',
         'ps1-cyan-soft': '#7fd8ff',
         'ps1-cyan-deep': '#0088cc',
-        // Warm yellows and oranges for confirmation / start buttons.
-        'ps1-yellow': '#ffcc33',
+        'ps1-yellow':      '#ffcc33',
         'ps1-yellow-soft': '#ffe07a',
-        // PS1 controller face button colours (used for ✕ ○ □ △).
-        'ps1-cross':   '#6fb4ff', // blue
-        'ps1-circle':  '#ff6b7a', // red/pink
-        'ps1-square':  '#ff7ac9', // magenta
-        'ps1-triangle':'#46e0a6', // green
-        // Ivory / card body colour.
-        'ps1-ivory': '#ece9d8',
+        'ps1-ivory':       '#ece9d8',
+
+        // --- TV-screen (inside the well) palette ---
+        // The emulator UI, loader, game room panel and controls modal all
+        // render INSIDE the console's screen well — i.e. as if painted on a
+        // CRT. They use these dark BIOS-ish tokens so the image reads as
+        // a TV image, while the outer shell uses the plastic tokens above.
+        'ps1-bios-bg':      '#0b0d2b',
+        'ps1-bios-bg-deep': '#05061a',
+        'ps1-bios-panel':   '#1a1e48',
+        'ps1-bios-border':  '#2e3470',
       },
       fontFamily: {
         // Display font (menu titles, PS1 look): Chakra Petch is a free
@@ -57,6 +78,11 @@ export default {
         'screen': 'inset 3px 3px 10px rgba(0,0,0,0.8), 0 0 20px rgba(0,255,65,0.1)',
         'ps1-cyan-glow': '0 0 10px rgba(0,204,255,0.55), 0 0 24px rgba(0,204,255,0.25)',
         'ps1-yellow-glow': '0 0 12px rgba(255,204,51,0.55)',
+        // Plastic shell relief: subtle highlight top/left, shadow bottom/right.
+        'ps1-plastic-relief': 'inset 1px 1px 0 rgba(255,255,255,0.55), inset -1px -1px 0 rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.25)',
+        'ps1-plastic-inset':  'inset 2px 2px 4px rgba(0,0,0,0.35), inset -1px -1px 2px rgba(255,255,255,0.3)',
+        'ps1-plastic-deep':   'inset 0 2px 6px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,255,255,0.08)',
+        'ps1-power-glow':     '0 0 8px rgba(196,50,52,0.75), 0 0 18px rgba(196,50,52,0.35)',
       },
       borderRadius: {
         'ps': '4px',
