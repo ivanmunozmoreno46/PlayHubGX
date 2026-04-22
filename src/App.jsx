@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import EmulatorScreen from './components/EmulatorScreen'
-import CRTOverlay from './components/CRTOverlay'
 
 /**
  * PS1 console shell.
@@ -21,8 +20,6 @@ function App() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
-      <CRTOverlay />
-
       <div className="w-full max-w-5xl relative animate-fade-in">
         <div className="ps1-shell ps1-plastic-texture rounded-md overflow-hidden">
 
@@ -44,18 +41,9 @@ function App() {
                 </div>
               </div>
 
-              {/* Right: compact disc lid with OPEN button */}
+              {/* Right: compact disc lid */}
               <div className="relative w-[92px] shrink-0">
-                <div className="ps1-disc-lid w-full">
-                  <button
-                    type="button"
-                    onClick={() => { /* cosmetic */ }}
-                    className="ps1-open-button absolute top-1 right-1 px-1.5 py-[2px] rounded-[2px] font-retro text-[6px] tracking-[0.2em] active:translate-y-[1px]"
-                    aria-label="OPEN disc lid"
-                  >
-                    OPEN
-                  </button>
-                </div>
+                <div className="ps1-disc-lid w-full" />
               </div>
             </div>
           </div>
@@ -182,32 +170,56 @@ function ControllerPort({ label }) {
 
 function PowerSwitch({ active, onClick }) {
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-2">
       <button
         type="button"
         onClick={onClick}
-        className={`ps1-power-switch ${active ? 'is-on' : ''} w-[52px] h-[22px] rounded-[3px] active:translate-y-[1px]`}
+        className={`ps1-round-button ${active ? 'is-on-green' : ''} w-[72px] h-[72px] rounded-full active:translate-y-[1px] flex items-center justify-center`}
         aria-label="POWER"
       >
-        <span className="sr-only">Power</span>
+        <svg
+          viewBox="0 0 24 24"
+          className={`w-9 h-9 ${active ? 'text-[#57e38a]' : 'text-[#2d9c4f]'}`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ filter: active ? 'drop-shadow(0 0 6px rgba(87,227,138,0.9))' : 'drop-shadow(0 0 2px rgba(45,156,79,0.7))' }}
+        >
+          <path d="M12 3v10" />
+          <path d="M6.3 7.5a8 8 0 1 0 11.4 0" />
+        </svg>
       </button>
-      <span className="font-retro text-[7px] ps1-silkscreen tracking-[0.22em]">POWER</span>
+      <span className="font-retro text-[8px] ps1-silkscreen tracking-[0.22em]">POWER</span>
     </div>
   )
 }
 
 function ResetButton({ onClick }) {
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-2">
       <button
         type="button"
         onClick={onClick}
-        className="ps1-button-dark w-[52px] h-[22px] rounded-[3px] active:translate-y-[1px] font-retro text-[7px] tracking-[0.22em]"
+        className="ps1-round-button w-[72px] h-[72px] rounded-full active:translate-y-[1px] flex items-center justify-center"
         aria-label="RESET"
       >
-        RESET
+        <svg
+          viewBox="0 0 24 24"
+          className="w-9 h-9 text-[#4aa8ff]"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ filter: 'drop-shadow(0 0 3px rgba(74,168,255,0.75))' }}
+        >
+          <path d="M3 12a9 9 0 1 0 3-6.7" />
+          <path d="M3 4v5h5" />
+        </svg>
       </button>
-      <span className="font-retro text-[7px] ps1-silkscreen tracking-[0.22em]">RESET</span>
+      <span className="font-retro text-[8px] ps1-silkscreen tracking-[0.22em]">RESET</span>
     </div>
   )
 }
