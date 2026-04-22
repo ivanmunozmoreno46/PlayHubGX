@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { GAME_ROOM_GAMEPAD_MAP } from '../hooks/useGameRoom'
+import GuestControlsPanel from './GuestControlsPanel'
+import { loadBindings, saveBindings } from '../lib/guestControls'
 
 /**
  * UI panel for the Host-Client streaming Game Room (see useGameRoom).
@@ -206,9 +207,22 @@ function GuestView({ room }) {
   const [isMuted, setIsMuted] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [gamepadName, setGamepadName] = useState(null)
+  const [showControls, setShowControls] = useState(false)
+  const [bindings, setBindings] = useState(() => loadBindings())
   const videoRef = useRef(null)
   const inputFocusRef = useRef(null)
   const stageRef = useRef(null)
+  // Keep a ref of the latest bindings so the input loops (which run inside
+  // stable effects) can read them without re-subscribing on every edit.
+  const bindingsRef = useRef(bindings)
+  useEffect(() => {
+    bindingsRef.current = bindings
+    saveBindings(bindings)
+  }, [bindings])
+  // When the controls modal is open we mute local input forwarding so the
+  // keys being captured in the remap dialog don't also reach the host.
+  const showControlsRef = useRef(showControls)
+  useEffect(() => { showControlsRef.current = showControls }, [showControls])
 
   // Attach / detach the incoming MediaStream to the <video> element.
   useEffect(() => {
@@ -225,7 +239,9 @@ function GuestView({ room }) {
     }
   }, [remoteStream])
 
-  // Forward key events to the host while the guest area is focused.
+  // Forward key events to the host while the guest area is focused. We
+  // translate keyboard codes to libretro RetroPad ids *on the guest* using
+  // the user's custom bindings, then send a generic `pad_button` message.
   useEffect(() => {
     if (!remoteStream) return
     const el = inputFocusRef.current
@@ -236,7 +252,11 @@ function GuestView({ room }) {
       if (e.code && e.code.startsWith('Arrow')) e.preventDefault()
       if (e.code === 'Space') e.preventDefault()
       if (e.repeat) return
-      sendInput({ type: e.type, code: e.code, key: e.key })
+      // Let the controls modal capture input while it's open.
+      if (showControlsRef.current) return
+      const libretroId = bindingsRef.current.keys[e.code]
+      if (libretroId === undefined) return
+      sendInput({ type: 'pad_button', id: libretroId, value: e.type === 'keydown' ? 1 : 0 })
     }
 
     el.addEventListener('keydown', onKey)
@@ -318,15 +338,19 @@ function GuestView({ room }) {
       }
 
       if (pad) {
+        // Suppress pad forwarding while the controls modal is open so button
+        // presses are captured as rebinds instead of driving the host.
+        const padActive = !showControlsRef.current
         // Buttons — only forward on transitions.
         for (let i = 0; i < pad.buttons.length; i++) {
-          const libretroId = GAME_ROOM_GAMEPAD_MAP[i]
-          if (libretroId === undefined) continue
+          const libretroId = bindingsRef.current.pad[i]
           const isDown = Boolean(pad.buttons[i] && pad.buttons[i].pressed)
           const was = prevButtons.get(i) || false
           if (isDown !== was) {
             prevButtons.set(i, isDown)
-            sendInput({ type: 'pad_button', id: libretroId, value: isDown ? 1 : 0 })
+            if (padActive && libretroId !== undefined) {
+              sendInput({ type: 'pad_button', id: libretroId, value: isDown ? 1 : 0 })
+            }
           }
         }
 
@@ -342,7 +366,7 @@ function GuestView({ room }) {
           if (Math.abs(v - prevAxes[axisKey]) >= GAMEPAD_AXIS_EPSILON ||
               (v === 0 && prevAxes[axisKey] !== 0)) {
             prevAxes[axisKey] = v
-            sendInput({ type: 'pad_axis', axis: axisKey, value: v })
+            if (padActive) sendInput({ type: 'pad_axis', axis: axisKey, value: v })
           }
         }
       }
@@ -527,6 +551,13 @@ function GuestView({ room }) {
         {remoteStream && (
           <div className="absolute bottom-2 right-2 flex items-center gap-2 z-10">
             <button
+              onClick={() => setShowControls(true)}
+              className="px-3 py-1 bg-gray-900/80 hover:bg-gray-800 text-white font-retro text-[8px] rounded border border-gray-600"
+              title="Configure controls"
+            >
+              CONTROLS
+            </button>
+            <button
               onClick={toggleMute}
               className="px-3 py-1 bg-gray-900/80 hover:bg-gray-800 text-white font-retro text-[8px] rounded border border-gray-600"
             >
@@ -543,19 +574,35 @@ function GuestView({ room }) {
         )}
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
+      <div className="mt-3 flex items-center justify-between gap-3">
         <div className="font-retro text-[7px] text-gray-400 leading-relaxed max-w-[70%]">
-          Plug in a USB/Bluetooth gamepad and press any button to activate it. Or click
-          the video area to use the keyboard — Arrows = D-Pad, Z = Cross, X = Circle,
-          C = Square, V = Triangle, Q/E = L1/R1, Enter = Start, Shift = Select.
+          Plug in a USB/Bluetooth gamepad and press any button to activate it, or click
+          the video area to use the keyboard. Press <span className="text-gray-200">CONTROLS</span>
+          {' '}below the video to remap any button.
         </div>
-        <button
-          onClick={leaveRoom}
-          className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white font-retro text-[8px] rounded"
-        >
-          LEAVE
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowControls(true)}
+            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white font-retro text-[8px] rounded"
+          >
+            CONTROLS
+          </button>
+          <button
+            onClick={leaveRoom}
+            className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white font-retro text-[8px] rounded"
+          >
+            LEAVE
+          </button>
+        </div>
       </div>
+
+      {showControls && (
+        <GuestControlsPanel
+          bindings={bindings}
+          onChange={setBindings}
+          onClose={() => setShowControls(false)}
+        />
+      )}
     </div>
   )
 }
