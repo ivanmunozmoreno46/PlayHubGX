@@ -179,19 +179,19 @@ function EmulatorScreen() {
       </div>
     )}
     <div className="w-full h-full flex flex-col">
-      {/* Slim floating status overlay (pad + room) only while the game is running. */}
+      {/* Slim floating status overlay (pad + room + exit) only while the game is running. */}
       {emulatorState.isRunning && (
         <div className="absolute top-2 right-2 z-40 flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-sm">
-            <GamepadIndicator
-              isConnected={gamepadState.isConnected}
-              gamepadId={gamepadState.gamepadId}
-              inputSource={gamepadState.isConnected ? 'gamepad' : 'keyboard'}
-            />
-            <span className={`font-retro text-[7px] tracking-widest ${gamepadState.isConnected ? 'text-ps1-led-green' : 'text-white/70'}`}>
-              {gamepadState.isConnected ? 'PAD' : 'NO PAD'}
-            </span>
-          </div>
+          {gamepadState.isConnected && (
+            <div className="flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-sm">
+              <GamepadIndicator
+                isConnected
+                gamepadId={gamepadState.gamepadId}
+                inputSource="gamepad"
+              />
+              <span className="font-retro text-[7px] tracking-widest text-ps1-led-green">PAD</span>
+            </div>
+          )}
           <button
             onClick={() => {
               if (isGuestStreaming) return
@@ -218,6 +218,13 @@ function EmulatorScreen() {
               <span className="ml-1 text-[7px]">{gameRoom.latency}ms</span>
             )}
           </button>
+          <button
+            onClick={resetEmulator}
+            className="px-3 py-1 font-retro text-[8px] tracking-widest rounded-sm border bg-[#d71a1a] hover:bg-[#ff3535] text-white border-white/50"
+            title="Stop the game and return to the BIOS desktop"
+          >
+            EXIT
+          </button>
         </div>
       )}
 
@@ -226,9 +233,19 @@ function EmulatorScreen() {
 
         {/* Game Room (Host-Client streaming) - host panel stays inside the console screen */}
         {gameRoomVisible && !isGuestStreaming && (
-          <div className="absolute inset-0 z-30 bg-ps1-bios-bg-deep/95 backdrop-blur-sm overflow-y-auto animate-fade-in">
+          <div className="absolute inset-0 z-30 overflow-y-auto animate-fade-in" style={{ backgroundColor: 'rgba(126,128,136,0.95)' }}>
             <div className="min-h-full flex items-center justify-center p-4">
-              <div className="w-full max-w-xl bg-ps1-bios-panel rounded-lg border border-ps1-cyan-deep/70 shadow-ps1-cyan-glow animate-slide-in-up">
+              <div
+                className="w-full max-w-xl animate-slide-in-up"
+                style={{
+                  background: '#c4c6cc',
+                  borderTop: '2px solid #e4e6ea',
+                  borderLeft: '2px solid #e4e6ea',
+                  borderRight: '2px solid #5a5c62',
+                  borderBottom: '2px solid #5a5c62',
+                  imageRendering: 'pixelated',
+                }}
+              >
                 <GameRoomPanel
                   room={gameRoom}
                   canHost={emulatorState.isRunning}
