@@ -70,12 +70,13 @@ function BiosActionButton({ children, onClick, disabled = false, strong = false 
         ${disabled ? 'opacity-40 pointer-events-none' : ''}
       `}
       style={{
-        background: strong
-          ? 'linear-gradient(180deg, #e6c25a 0%, #a98420 100%)'
-          : 'linear-gradient(180deg, #c8a95a 0%, #8c7120 100%)',
+        background: strong ? '#d8a833' : '#b48a2a',
         borderTop: '2px solid #f2dc92',
+        borderLeft: '2px solid #f2dc92',
+        borderRight: '2px solid #5a3f08',
         borderBottom: '2px solid #5a3f08',
         padding: 'clamp(8px,1.4vh,14px) clamp(14px,2vw,24px)',
+        imageRendering: 'pixelated',
       }}
     >
       <span
@@ -107,12 +108,14 @@ function PillButton({ children, onClick, color = 'red', active = false, disabled
       style={{
         background: active ? palette.bgActive : palette.bg,
         color: palette.text,
-        borderTop: '2px solid rgba(255,255,255,0.45)',
-        borderBottom: '2px solid rgba(0,0,0,0.45)',
+        borderTop: '2px solid rgba(255,255,255,0.55)',
+        borderLeft: '2px solid rgba(255,255,255,0.55)',
+        borderRight: '2px solid rgba(0,0,0,0.55)',
+        borderBottom: '2px solid rgba(0,0,0,0.55)',
         padding: 'clamp(6px,1vh,10px) clamp(14px,2.2vw,22px)',
         fontSize: 'clamp(11px,1.3vw,15px)',
-        textShadow: '1px 1px 0 rgba(0,0,0,0.55)',
         minWidth: 'clamp(70px, 9vw, 110px)',
+        imageRendering: 'pixelated',
       }}
     >
       {children}
@@ -142,11 +145,9 @@ function SaveBlocksGrid({ biosLoaded, gameLoaded }) {
         : isHeaderRowSlot2
           ? gameLoaded
           : false
-      let bg = 'linear-gradient(145deg, #d9dade 0%, #b5b8bf 100%)'
+      let bg = '#c4c6cc'
       if (highlight) {
-        bg = isSlot1Area
-          ? 'linear-gradient(135deg, #3fa55a 0%, #1b6b2f 100%)'
-          : 'linear-gradient(135deg, #c9b632 0%, #7c6a10 100%)'
+        bg = isSlot1Area ? '#2d9a4a' : '#b8a528'
       }
       cells.push(
         <div
@@ -154,7 +155,7 @@ function SaveBlocksGrid({ biosLoaded, gameLoaded }) {
           style={{
             background: bg,
             boxShadow:
-              'inset 1px 1px 0 rgba(255,255,255,0.45), inset -1px -1px 0 rgba(0,0,0,0.22)',
+              'inset 2px 2px 0 rgba(255,255,255,0.35), inset -2px -2px 0 rgba(0,0,0,0.30)',
           }}
         />
       )
@@ -166,9 +167,10 @@ function SaveBlocksGrid({ biosLoaded, gameLoaded }) {
       style={{
         gridTemplateColumns: `repeat(${cols}, 1fr)`,
         gridTemplateRows: `repeat(${rows}, 1fr)`,
-        gap: '2px',
-        padding: '2px',
-        background: '#8f9198',
+        gap: '3px',
+        padding: '3px',
+        background: '#7f8189',
+        imageRendering: 'pixelated',
       }}
     >
       {cells}
@@ -270,10 +272,12 @@ function IconBlock({ icon, loaded, fileName, emptyLabel, children }) {
       className="relative flex flex-col items-center"
       style={{
         width: 'clamp(220px, 30vw, 360px)',
-        background: 'linear-gradient(180deg, #6a6c72 0%, #3a3c42 100%)',
-        border: '2px solid #1a1c20',
-        boxShadow:
-          '3px 3px 0 rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.18)',
+        background: '#55575d',
+        borderTop: '2px solid #8a8c92',
+        borderLeft: '2px solid #8a8c92',
+        borderRight: '2px solid #1a1c20',
+        borderBottom: '2px solid #1a1c20',
+        boxShadow: '3px 3px 0 rgba(0,0,0,0.45)',
         padding: 'clamp(14px, 2vw, 26px) clamp(12px, 1.6vw, 22px)',
         gap: 'clamp(10px, 1.6vh, 18px)',
       }}
@@ -283,9 +287,11 @@ function IconBlock({ icon, loaded, fileName, emptyLabel, children }) {
         style={{
           fontSize: 'clamp(54px, 9vw, 130px)',
           lineHeight: 1,
-          filter: loaded
-            ? 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))'
-            : 'drop-shadow(0 4px 6px rgba(0,0,0,0.6)) grayscale(0.35) opacity(0.9)',
+          textShadow: loaded ? '3px 3px 0 rgba(0,0,0,0.55)' : '3px 3px 0 rgba(0,0,0,0.55)',
+          filter: loaded ? 'none' : 'grayscale(0.4) opacity(0.85)',
+          imageRendering: 'pixelated',
+          WebkitFontSmoothing: 'none',
+          fontSmooth: 'never',
         }}
       >
         {icon}
