@@ -264,26 +264,16 @@ export default function BiosDesktop({
  * Vertical block = big icon on top, action button below, file name beneath.
  * Sits on a deep maroon panel with 3D border to match the BIOS reference.
  */
-function IconBlock({ icon, accent, loaded, fileName, emptyLabel, children }) {
-  const bg = loaded
-    ? accent === 'green'
-      ? 'linear-gradient(180deg, #2b1e22 0%, #160a0c 100%)'
-      : 'linear-gradient(180deg, #2b1e22 0%, #160a0c 100%)'
-    : 'linear-gradient(180deg, #3a1e20 0%, #16080a 100%)'
-  const readoutBg = loaded
-    ? accent === 'green'
-      ? 'rgba(27,107,47,0.85)'
-      : 'rgba(124,106,16,0.9)'
-    : 'rgba(20,20,25,0.65)'
+function IconBlock({ icon, loaded, fileName, emptyLabel, children }) {
   return (
     <div
       className="relative flex flex-col items-center"
       style={{
         width: 'clamp(220px, 30vw, 360px)',
-        background: bg,
-        border: '2px solid #0b0405',
+        background: 'linear-gradient(180deg, #6a6c72 0%, #3a3c42 100%)',
+        border: '2px solid #1a1c20',
         boxShadow:
-          '3px 3px 0 rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,200,160,0.18)',
+          '3px 3px 0 rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.18)',
         padding: 'clamp(14px, 2vw, 26px) clamp(12px, 1.6vw, 22px)',
         gap: 'clamp(10px, 1.6vh, 18px)',
       }}
@@ -305,7 +295,7 @@ function IconBlock({ icon, accent, loaded, fileName, emptyLabel, children }) {
         className="w-full font-lcd text-[clamp(11px,1.3vw,15px)] text-white tracking-widest truncate text-center"
         title={fileName || ''}
         style={{
-          background: readoutBg,
+          background: loaded ? 'rgba(40,42,48,0.85)' : 'rgba(24,26,30,0.75)',
           borderTop: '1px solid rgba(255,255,255,0.18)',
           borderBottom: '1px solid rgba(0,0,0,0.45)',
           padding: '3px 10px',
