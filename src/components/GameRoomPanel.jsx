@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { GAME_ROOM_GAMEPAD_MAP } from '../hooks/useGameRoom'
 
 /**
  * UI panel for the Host-Client streaming Game Room (see useGameRoom).
@@ -6,7 +7,34 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * The host sees a big copyable room code, a status/latency badge and a
  * stop button. The guest sees a code input on entry, then a <video> element
  * that plays the host's stream (muted by default, with a button to unmute).
+ *
+ * Guests can drive Player 2 with either the keyboard or a Web Gamepad API
+ * device (USB/Bluetooth pad). The guest polls the pad on every animation
+ * frame and only forwards *changes* through the PeerJS DataChannel so the
+ * host receives the same kind of discrete events as keyboard input.
  */
+
+// Deadzone applied to analog stick inputs on the guest side. Raw values
+// below this threshold are snapped to zero so small stick jitter doesn't
+// saturate the DataChannel.
+const GAMEPAD_AXIS_DEADZONE = 0.15
+// Minimum absolute delta (after deadzone) required before we forward an
+// axis update to the host. Keeps the channel quiet when the stick is
+// fully deflected and only noisy on the analog-to-digital boundary.
+const GAMEPAD_AXIS_EPSILON = 0.03
+// Analog trigger buttons (LT/RT = indices 6/7) already come through as
+// digital in the Standard Gamepad mapping — their `.pressed` flag is true
+// past ~0.5. We rely on `.pressed` rather than `.value` to keep the host
+// path simple.
+
+function applyDeadzone(value) {
+  if (Math.abs(value) < GAMEPAD_AXIS_DEADZONE) return 0
+  // Rescale so the usable range starts at the deadzone edge (feels more
+  // responsive than a hard cutoff).
+  const sign = value < 0 ? -1 : 1
+  const scaled = (Math.abs(value) - GAMEPAD_AXIS_DEADZONE) / (1 - GAMEPAD_AXIS_DEADZONE)
+  return sign * Math.max(0, Math.min(1, scaled))
+}
 
 function StatusBadge({ status, isHost, guestCount }) {
   const label = (() => {
@@ -177,6 +205,7 @@ function GuestView({ room }) {
   const [inputCode, setInputCode] = useState('')
   const [isMuted, setIsMuted] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [gamepadName, setGamepadName] = useState(null)
   const videoRef = useRef(null)
   const inputFocusRef = useRef(null)
   const stageRef = useRef(null)
@@ -218,6 +247,120 @@ function GuestView({ room }) {
       el.removeEventListener('keydown', onKey)
       el.removeEventListener('keyup', onKey)
     }
+  }, [remoteStream, sendInput])
+
+  // Poll the Gamepad API while the stream is active and forward button /
+  // axis changes to the host. We only send *deltas* so pads that are idle
+  // don't spam the DataChannel.
+  useEffect(() => {
+    if (!remoteStream) {
+      setGamepadName(null)
+      return
+    }
+    if (typeof navigator === 'undefined' || typeof navigator.getGamepads !== 'function') {
+      return
+    }
+
+    let rafId = null
+    // Previous digital state per Standard Gamepad button index.
+    const prevButtons = new Map()
+    // Previous (post-deadzone) analog value per axis key.
+    const prevAxes = { lx: 0, ly: 0, rx: 0, ry: 0 }
+    let activeIndex = null
+
+    const releaseAll = () => {
+      prevButtons.forEach((wasDown, idx) => {
+        if (!wasDown) return
+        const libretroId = GAME_ROOM_GAMEPAD_MAP[idx]
+        if (libretroId !== undefined) {
+          sendInput({ type: 'pad_button', id: libretroId, value: 0 })
+        }
+      })
+      prevButtons.clear()
+      Object.keys(prevAxes).forEach((axisKey) => {
+        if (prevAxes[axisKey] !== 0) {
+          sendInput({ type: 'pad_axis', axis: axisKey, value: 0 })
+          prevAxes[axisKey] = 0
+        }
+      })
+    }
+
+    const onConnected = (e) => {
+      if (activeIndex == null && e.gamepad) {
+        activeIndex = e.gamepad.index
+        setGamepadName(e.gamepad.id || 'GAMEPAD')
+      }
+    }
+    const onDisconnected = (e) => {
+      if (e.gamepad && e.gamepad.index === activeIndex) {
+        releaseAll()
+        activeIndex = null
+        setGamepadName(null)
+      }
+    }
+    window.addEventListener('gamepadconnected', onConnected)
+    window.addEventListener('gamepaddisconnected', onDisconnected)
+
+    const tick = () => {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : []
+      let pad = null
+      if (activeIndex != null) pad = pads[activeIndex] || null
+      if (!pad) {
+        // Pick the first connected pad as the active one.
+        for (let i = 0; i < pads.length; i++) {
+          if (pads[i] && pads[i].connected) {
+            pad = pads[i]
+            activeIndex = pads[i].index
+            if (!gamepadName) setGamepadName(pads[i].id || 'GAMEPAD')
+            break
+          }
+        }
+      }
+
+      if (pad) {
+        // Buttons — only forward on transitions.
+        for (let i = 0; i < pad.buttons.length; i++) {
+          const libretroId = GAME_ROOM_GAMEPAD_MAP[i]
+          if (libretroId === undefined) continue
+          const isDown = Boolean(pad.buttons[i] && pad.buttons[i].pressed)
+          const was = prevButtons.get(i) || false
+          if (isDown !== was) {
+            prevButtons.set(i, isDown)
+            sendInput({ type: 'pad_button', id: libretroId, value: isDown ? 1 : 0 })
+          }
+        }
+
+        // Axes — send every change above the epsilon threshold.
+        const axisMap = [
+          ['lx', pad.axes[0] || 0],
+          ['ly', pad.axes[1] || 0],
+          ['rx', pad.axes[2] || 0],
+          ['ry', pad.axes[3] || 0],
+        ]
+        for (const [axisKey, raw] of axisMap) {
+          const v = applyDeadzone(raw)
+          if (Math.abs(v - prevAxes[axisKey]) >= GAMEPAD_AXIS_EPSILON ||
+              (v === 0 && prevAxes[axisKey] !== 0)) {
+            prevAxes[axisKey] = v
+            sendInput({ type: 'pad_axis', axis: axisKey, value: v })
+          }
+        }
+      }
+
+      rafId = window.requestAnimationFrame(tick)
+    }
+    rafId = window.requestAnimationFrame(tick)
+
+    return () => {
+      if (rafId != null) window.cancelAnimationFrame(rafId)
+      window.removeEventListener('gamepadconnected', onConnected)
+      window.removeEventListener('gamepaddisconnected', onDisconnected)
+      releaseAll()
+      setGamepadName(null)
+    }
+  // gamepadName is only used for the initial indicator; adding it to deps
+  // would restart the polling loop whenever the name changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remoteStream, sendInput])
 
   const toggleMute = useCallback(() => {
@@ -306,6 +449,17 @@ function GuestView({ room }) {
           <div className="font-retro text-[9px] text-green-400 tracking-widest">{roomCode}</div>
         </div>
         <div className="flex items-center gap-2">
+          {gamepadName && (
+            <div
+              className="flex items-center gap-1 px-2 py-1 rounded bg-ps1-dark border border-ps1-gray"
+              title={gamepadName}
+            >
+              <span className="w-2 h-2 rounded-full bg-green-400" />
+              <span className="font-retro text-[7px] text-gray-200 tracking-wider">
+                GAMEPAD
+              </span>
+            </div>
+          )}
           <LatencyBadge latency={latency} />
           <StatusBadge status={status} isHost={false} guestCount={0} />
         </div>
@@ -391,8 +545,9 @@ function GuestView({ room }) {
 
       <div className="mt-3 flex items-center justify-between">
         <div className="font-retro text-[7px] text-gray-400 leading-relaxed max-w-[70%]">
-          Click the video area to capture keyboard input. Arrows = D-Pad, Z = Cross,
-          X = Circle, C = Square, V = Triangle, Q/E = L1/R1, Enter = Start, Shift = Select.
+          Plug in a USB/Bluetooth gamepad and press any button to activate it. Or click
+          the video area to use the keyboard — Arrows = D-Pad, Z = Cross, X = Circle,
+          C = Square, V = Triangle, Q/E = L1/R1, Enter = Start, Shift = Select.
         </div>
         <button
           onClick={leaveRoom}
