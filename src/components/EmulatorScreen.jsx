@@ -239,93 +239,100 @@ function EmulatorScreen() {
           </div>
         )}
 
+        {/* EmulatorJS canvas host — kept empty in React; EmulatorJS owns innerHTML */}
         <div
           ref={containerRef}
-          className="absolute inset-0 overflow-hidden flex flex-col"
+          className="absolute inset-0 overflow-hidden"
           style={{ backgroundColor: '#05061a' }}
-        >
-          {emulatorState.isLoading ? (
-            /* Loading Screen - BIOS navy with spinning diamond */
-            <div className="w-full h-full flex flex-col items-center justify-center bg-ps1-bios-bg-deep relative animate-fade-in">
-              <div
-                className="absolute inset-0 opacity-25"
-                style={{
-                  backgroundImage:
-                    'linear-gradient(rgba(0,204,255,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(0,204,255,0.12) 1px, transparent 1px)',
-                  backgroundSize: '48px 48px',
-                }}
-              />
-              <div className="relative z-10 flex flex-col items-center gap-4">
-                <div className="ps1-loader" />
-                <div className="font-ps font-semibold text-[13px] text-ps1-yellow tracking-[0.25em] glow-yellow">
-                  {emulatorState.loadingMessage || 'LOADING'}
-                </div>
-                <div className="w-56 h-2 bg-ps1-bios-panel border border-ps1-bios-border rounded-sm overflow-hidden">
-                  <div
-                    className="h-full bg-ps1-cyan transition-all duration-300 shadow-ps1-cyan-glow"
-                    style={{ width: `${emulatorState.progress}%` }}
-                  />
-                </div>
-                <div className="font-lcd text-[18px] leading-none text-ps1-cyan-soft">
-                  {emulatorState.progress}%
-                </div>
-                <div className="font-retro text-[6px] text-ps1-cyan-soft/70 mt-2 px-8 text-center max-w-xs tracking-widest">
-                  BIOS: {biosFile?.name}<br/>
-                  ROM: {romFiles.map(f => f.name).join(', ')}
-                </div>
-              </div>
-            </div>
-          ) : emulatorState.isRunning ? (
-            /* Emulator Running */
-            <div className="w-full h-full relative bg-black">
-              {emulatorState.needsMenuInteraction && (
-                <div className="absolute inset-0 flex items-center justify-center bg-ps1-bios-bg-deep/80 z-10 animate-fade-in">
-                  <div className="text-center">
-                    <div className="font-ps font-semibold text-ps1-yellow text-[14px] tracking-[0.3em] mb-4 glow-yellow">
-                      SELECT GAME
-                    </div>
-                    <div className="font-retro text-[8px] text-ps1-cyan-soft tracking-widest">
-                      Use ↑↓←→ to navigate
-                    </div>
-                    <div className="font-retro text-[8px] text-ps1-cyan-soft tracking-widest mt-1">
-                      Enter/Z to select
-                    </div>
+        />
+
+        {/* UI overlays rendered as siblings so React never reconciles into
+            the div EmulatorJS mutates imperatively. */}
+        {!emulatorState.isRunning && (
+          <div
+            className="absolute inset-0 overflow-hidden flex flex-col"
+            style={{ backgroundColor: '#05061a' }}
+          >
+            {emulatorState.isLoading ? (
+              /* Loading Screen - BIOS navy with spinning diamond */
+              <div className="w-full h-full flex flex-col items-center justify-center bg-ps1-bios-bg-deep relative animate-fade-in">
+                <div
+                  className="absolute inset-0 opacity-25"
+                  style={{
+                    backgroundImage:
+                      'linear-gradient(rgba(0,204,255,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(0,204,255,0.12) 1px, transparent 1px)',
+                    backgroundSize: '48px 48px',
+                  }}
+                />
+                <div className="relative z-10 flex flex-col items-center gap-4">
+                  <div className="ps1-loader" />
+                  <div className="font-ps font-semibold text-[13px] text-ps1-yellow tracking-[0.25em] glow-yellow">
+                    {emulatorState.loadingMessage || 'LOADING'}
+                  </div>
+                  <div className="w-56 h-2 bg-ps1-bios-panel border border-ps1-bios-border rounded-sm overflow-hidden">
+                    <div
+                      className="h-full bg-ps1-cyan transition-all duration-300 shadow-ps1-cyan-glow"
+                      style={{ width: `${emulatorState.progress}%` }}
+                    />
+                  </div>
+                  <div className="font-lcd text-[18px] leading-none text-ps1-cyan-soft">
+                    {emulatorState.progress}%
+                  </div>
+                  <div className="font-retro text-[6px] text-ps1-cyan-soft/70 mt-2 px-8 text-center max-w-xs tracking-widest">
+                    BIOS: {biosFile?.name}<br/>
+                    ROM: {romFiles.map(f => f.name).join(', ')}
                   </div>
                 </div>
-              )}
-            </div>
-          ) : emulatorState.error ? (
-            /* Error Screen */
-            <div className="w-full h-full flex flex-col items-center justify-center bg-ps1-bios-bg-deep animate-fade-in">
-              <div className="font-ps font-semibold text-ps1-led-red text-[14px] tracking-[0.3em] mb-4">ERROR</div>
-              <div className="font-retro text-[7px] text-ps1-cyan-soft px-4 text-center max-w-xs mb-4 leading-relaxed">
-                {emulatorState.error}
               </div>
-              <ActionButton onClick={resetEmulator}>RESET</ActionButton>
+            ) : emulatorState.error ? (
+              /* Error Screen */
+              <div className="w-full h-full flex flex-col items-center justify-center bg-ps1-bios-bg-deep animate-fade-in">
+                <div className="font-ps font-semibold text-ps1-led-red text-[14px] tracking-[0.3em] mb-4">ERROR</div>
+                <div className="font-retro text-[7px] text-ps1-cyan-soft px-4 text-center max-w-xs mb-4 leading-relaxed">
+                  {emulatorState.error}
+                </div>
+                <ActionButton onClick={resetEmulator}>RESET</ActionButton>
+              </div>
+            ) : (
+              /* PSX BIOS Memory Card Manager desktop */
+              <BiosDesktop
+                biosFile={biosFile}
+                romFiles={romFiles}
+                onLoadBios={triggerBiosInput}
+                onLoadGame={triggerRomInput}
+                onStart={startEmulator}
+                onReset={resetEmulator}
+                onToggleRoom={() => {
+                  if (isGuestStreaming) return
+                  setShowGameRoom((v) => !v)
+                }}
+                gameRoomVisible={gameRoomVisible}
+                gameRoomActive={gameRoomActive}
+                roomLabel={
+                  gameRoomActive
+                    ? (gameRoom.isHost ? 'HOSTING' : 'IN ROOM')
+                    : gameRoomVisible ? 'ROOM ON' : 'ROOM'
+                }
+              />
+            )}
+          </div>
+        )}
+
+        {emulatorState.isRunning && emulatorState.needsMenuInteraction && (
+          <div className="absolute inset-0 flex items-center justify-center bg-ps1-bios-bg-deep/80 z-10 animate-fade-in">
+            <div className="text-center">
+              <div className="font-ps font-semibold text-ps1-yellow text-[14px] tracking-[0.3em] mb-4 glow-yellow">
+                SELECT GAME
+              </div>
+              <div className="font-retro text-[8px] text-ps1-cyan-soft tracking-widest">
+                Use ↑↓←→ to navigate
+              </div>
+              <div className="font-retro text-[8px] text-ps1-cyan-soft tracking-widest mt-1">
+                Enter/Z to select
+              </div>
             </div>
-          ) : (
-            /* PSX BIOS Memory Card Manager desktop */
-            <BiosDesktop
-              biosFile={biosFile}
-              romFiles={romFiles}
-              onLoadBios={triggerBiosInput}
-              onLoadGame={triggerRomInput}
-              onStart={startEmulator}
-              onReset={resetEmulator}
-              onToggleRoom={() => {
-                if (isGuestStreaming) return
-                setShowGameRoom((v) => !v)
-              }}
-              gameRoomVisible={gameRoomVisible}
-              gameRoomActive={gameRoomActive}
-              roomLabel={
-                gameRoomActive
-                  ? (gameRoom.isHost ? 'HOSTING' : 'IN ROOM')
-                  : gameRoomVisible ? 'ROOM ON' : 'ROOM'
-              }
-            />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Hidden File Inputs */}
