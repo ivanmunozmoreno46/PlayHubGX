@@ -11,20 +11,26 @@ import { useGLTF, Center, Bounds } from '@react-three/drei'
  * Manager flat-shaded look.
  */
 
-function SpinningModel({ url, speed = 0.6, tiltX = 0 }) {
+function SpinningModel({ url, speed = 0.6, tilt = [0, 0, 0] }) {
   const group = useRef(null)
   const { scene } = useGLTF(url)
   useFrame((_, delta) => {
     if (group.current) group.current.rotation.y += delta * speed
   })
   return (
-    <group ref={group} rotation={[tiltX, 0, 0]}>
-      <primitive object={scene} />
+    <group>
+      {/* Outer group spins around Y; inner group holds the static tilt so
+          the rotation still reads as pure Y-spin but from a 3/4 angle. */}
+      <group ref={group}>
+        <group rotation={tilt}>
+          <primitive object={scene} />
+        </group>
+      </group>
     </group>
   )
 }
 
-export default function Model3D({ url, speed = 0.6, tiltX = 0, cameraDistance = 3 }) {
+export default function Model3D({ url, speed = 0.6, tilt = [0, 0, 0], cameraDistance = 3 }) {
   return (
     <Canvas
       dpr={[1, 2]}
@@ -32,13 +38,16 @@ export default function Model3D({ url, speed = 0.6, tiltX = 0, cameraDistance = 
       style={{ width: '100%', height: '100%', background: 'transparent' }}
       gl={{ alpha: true, antialias: true, preserveDrawingBuffer: false }}
     >
-      <ambientLight intensity={0.9} />
-      <directionalLight position={[3, 5, 4]} intensity={1.1} />
-      <directionalLight position={[-4, -2, -3]} intensity={0.35} />
+      {/* Bright, flat studio rig: strong ambient + hemi fill + two keys. */}
+      <ambientLight intensity={1.4} />
+      <hemisphereLight args={['#ffffff', '#8a8c94', 0.8]} />
+      <directionalLight position={[3, 5, 4]} intensity={1.6} />
+      <directionalLight position={[-4, -2, -3]} intensity={0.7} />
+      <directionalLight position={[0, -4, 2]} intensity={0.4} />
       <Suspense fallback={null}>
         <Bounds fit clip observe margin={1.15}>
           <Center>
-            <SpinningModel url={url} speed={speed} tiltX={tiltX} />
+            <SpinningModel url={url} speed={speed} tilt={tilt} />
           </Center>
         </Bounds>
       </Suspense>
