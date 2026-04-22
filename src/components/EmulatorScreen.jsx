@@ -4,6 +4,7 @@ import { useGamepad } from '../hooks/useGamepad'
 import { useGameRoom } from '../hooks/useGameRoom'
 import GamepadIndicator from './GamepadIndicator'
 import GameRoomPanel from './GameRoomPanel'
+import { Wrench3D, Disc3D } from './Bios3DObjects'
 
 /**
  * PS1 Memory Card Manager Style - Light Gray Grid Theme
@@ -370,7 +371,7 @@ function EmulatorScreen() {
                     <SlotHeader slot="1" color="#44cc66" label="BIOS" />
                   </div>
                   <div
-                    className="flex-1 flex items-center justify-center border border-ps1-bios-border rounded-sm"
+                    className="flex-1 flex items-center justify-center border border-ps1-bios-border rounded-sm overflow-hidden"
                     style={{
                       background: 'linear-gradient(135deg, #10133a 0%, #1a1e48 100%)',
                       boxShadow: biosFile
@@ -378,7 +379,7 @@ function EmulatorScreen() {
                         : 'inset 0 0 30px rgba(0,0,0,0.6)',
                     }}
                   >
-                    <span className="text-4xl drop-shadow-[0_0_8px_rgba(0,204,255,0.4)]">🔧</span>
+                    <Wrench3D accent={biosFile ? '#44cc66' : '#5eb6ff'} />
                   </div>
                   <div className="mt-2 flex flex-col items-center gap-1">
                     <StartButton onClick={triggerBiosInput}>
@@ -416,7 +417,7 @@ function EmulatorScreen() {
                     <SlotHeader slot="2" color="#ffcc33" label="GAME" />
                   </div>
                   <div
-                    className="flex-1 flex items-center justify-center border border-ps1-bios-border rounded-sm"
+                    className="flex-1 flex items-center justify-center border border-ps1-bios-border rounded-sm overflow-hidden"
                     style={{
                       background: 'linear-gradient(135deg, #10133a 0%, #1a1e48 100%)',
                       boxShadow: romFiles.length > 0
@@ -424,7 +425,7 @@ function EmulatorScreen() {
                         : 'inset 0 0 30px rgba(0,0,0,0.6)',
                     }}
                   >
-                    <span className="text-4xl drop-shadow-[0_0_8px_rgba(0,204,255,0.4)]">💿</span>
+                    <Disc3D accent={romFiles.length > 0 ? '#ffcc33' : '#5eb6ff'} />
                   </div>
                   <div className="mt-2 flex flex-col items-center gap-1">
                     <StartButton

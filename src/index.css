@@ -357,6 +357,27 @@ html.crt-off .crt-overlay { display: none; }
     0 0 14px rgba(87, 227, 138, 0.55);
 }
 
+/* ---------- 3D BIOS objects (wrench / disc) ---------- */
+/* A perspective stage that makes rotateY() on children read as 3D. */
+.stage-3d {
+  perspective: 700px;
+  perspective-origin: 50% 50%;
+}
+.spin-y {
+  animation: spin-y 8s linear infinite;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.spin-y-reverse {
+  animation: spin-y 10s linear infinite reverse;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+@keyframes spin-y {
+  from { transform: rotateY(0deg); }
+  to   { transform: rotateY(360deg); }
+}
+
 /* ---------- Disc Lid Shadow ---------- */
 .disc-lid {
   box-shadow:
