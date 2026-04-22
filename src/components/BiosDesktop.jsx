@@ -229,7 +229,7 @@ export default function BiosDesktop({
             loaded={gameLoaded}
             fileName={romFiles[0]?.name}
             emptyLabel="— NO GAME —"
-            formatTag="ROM · CHD / BIN / CUE / ISO"
+            formatTag="ROM · CHD"
           >
             <BiosActionButton onClick={onLoadGame} disabled={!biosLoaded}>
               {gameLoaded ? 'CHANGE GAME' : 'LOAD GAME'}

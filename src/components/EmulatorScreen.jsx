@@ -134,11 +134,9 @@ function EmulatorScreen() {
   const handleRomChange = useCallback((e) => {
     const files = Array.from(e.target.files)
     if (files.length > 0) {
-      const validExtensions = ['.bin', '.cue', '.iso', '.img', '.chd', '.pbp']
       for (const file of files) {
-        const isValid = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
-        if (!isValid) {
-          alert(`Invalid file: ${file.name}`)
+        if (!file.name.toLowerCase().endsWith('.chd')) {
+          alert(`Invalid file: ${file.name}. Only .chd ROMs are supported.`)
           return
         }
       }
@@ -363,7 +361,7 @@ function EmulatorScreen() {
       <input
         ref={romInputRef}
         type="file"
-        accept=".bin,.cue,.iso,.img,.chd,.pbp"
+        accept=".chd"
         multiple
         onChange={handleRomChange}
         className="hidden"
