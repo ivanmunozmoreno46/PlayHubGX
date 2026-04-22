@@ -300,7 +300,7 @@ function TitleBar() {
         className="font-lcd text-white/70 tracking-[0.24em] mt-1"
         style={{ fontSize: 'clamp(10px,1.2vw,13px)' }}
       >
-        PSX BIOS LOADER · NTSC · CHD
+        PSX ONLINE EMULATOR
       </span>
     </div>
   )
