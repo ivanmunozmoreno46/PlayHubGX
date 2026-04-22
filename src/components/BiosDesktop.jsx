@@ -96,6 +96,7 @@ function PillButton({ children, onClick, color = 'red', active = false, disabled
   const palette = {
     red: { bg: '#d71a1a', bgActive: '#ff3535', text: '#ffffff' },
     blue: { bg: '#1a4ed7', bgActive: '#3373ff', text: '#ffffff' },
+    green: { bg: '#1ba23e', bgActive: '#34d15c', text: '#ffffff' },
   }[color]
   return (
     <button
@@ -141,7 +142,7 @@ function SaveBlocksGrid({ biosLoaded, gameLoaded }) {
         : isHeaderRowSlot2
           ? gameLoaded
           : false
-      let bg = '#b6b5a8'
+      let bg = 'linear-gradient(145deg, #d9dade 0%, #b5b8bf 100%)'
       if (highlight) {
         bg = isSlot1Area
           ? 'linear-gradient(135deg, #3fa55a 0%, #1b6b2f 100%)'
@@ -153,7 +154,7 @@ function SaveBlocksGrid({ biosLoaded, gameLoaded }) {
           style={{
             background: bg,
             boxShadow:
-              'inset 1px 1px 0 rgba(255,255,255,0.25), inset -1px -1px 0 rgba(0,0,0,0.35)',
+              'inset 1px 1px 0 rgba(255,255,255,0.45), inset -1px -1px 0 rgba(0,0,0,0.22)',
           }}
         />
       )
@@ -167,7 +168,7 @@ function SaveBlocksGrid({ biosLoaded, gameLoaded }) {
         gridTemplateRows: `repeat(${rows}, 1fr)`,
         gap: '2px',
         padding: '2px',
-        background: '#6e6e76',
+        background: '#8f9198',
       }}
     >
       {cells}
@@ -230,16 +231,7 @@ export default function BiosDesktop({
           </IconBlock>
         </div>
 
-        {/* START GAME (primary) */}
-        <div className="flex items-center justify-center">
-          <div style={{ width: 'clamp(240px, 32vw, 400px)' }}>
-            <BiosActionButton onClick={onStart} disabled={!canStart} strong>
-              START GAME
-            </BiosActionButton>
-          </div>
-        </div>
-
-        {/* Bottom confirm-style pill row */}
+        {/* Bottom confirm-style pill row: RESET · START · ROOM */}
         <div className="flex items-center justify-center gap-[clamp(8px,1.5vw,18px)]">
           <PillButton
             color="red"
@@ -247,6 +239,13 @@ export default function BiosDesktop({
             disabled={!biosLoaded && !gameLoaded}
           >
             RESET
+          </PillButton>
+          <PillButton
+            color="green"
+            onClick={onStart}
+            disabled={!canStart}
+          >
+            START
           </PillButton>
           <PillButton
             color="blue"
