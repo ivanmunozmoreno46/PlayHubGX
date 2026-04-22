@@ -206,6 +206,8 @@ export default function BiosDesktop({
           gap: 'clamp(10px, 2vh, 24px)',
         }}
       >
+        <TitleBar />
+
         {/* Two side blocks: wrench+LOAD BIOS | disc+LOAD GAME */}
         <div className="flex-1 min-h-0 flex items-center justify-center gap-[clamp(14px,3vw,48px)]">
           <IconBlock
@@ -214,6 +216,7 @@ export default function BiosDesktop({
             loaded={biosLoaded}
             fileName={biosFile?.name}
             emptyLabel="— NO BIOS —"
+            formatTag="BIOS · NTSC"
           >
             <BiosActionButton onClick={onLoadBios}>
               {biosLoaded ? 'CHANGE BIOS' : 'LOAD BIOS'}
@@ -226,6 +229,7 @@ export default function BiosDesktop({
             loaded={gameLoaded}
             fileName={romFiles[0]?.name}
             emptyLabel="— NO GAME —"
+            formatTag="ROM · CHD / BIN / CUE / ISO"
           >
             <BiosActionButton onClick={onLoadGame} disabled={!biosLoaded}>
               {gameLoaded ? 'CHANGE GAME' : 'LOAD GAME'}
@@ -266,7 +270,41 @@ export default function BiosDesktop({
  * Vertical block = big icon on top, action button below, file name beneath.
  * Sits on a deep maroon panel with 3D border to match the BIOS reference.
  */
-function IconBlock({ icon, loaded, fileName, emptyLabel, children }) {
+function TitleBar() {
+  return (
+    <div
+      className="flex flex-col items-center select-none"
+      style={{
+        padding: 'clamp(6px,1vh,12px) clamp(12px,2vw,28px)',
+        background: '#1a1c20',
+        borderTop: '2px solid #8a8c92',
+        borderLeft: '2px solid #8a8c92',
+        borderRight: '2px solid #0b0c0e',
+        borderBottom: '2px solid #0b0c0e',
+        imageRendering: 'pixelated',
+      }}
+    >
+      <span
+        className="font-ps font-black tracking-[0.3em] text-white"
+        style={{
+          fontSize: 'clamp(16px,2.4vw,28px)',
+          lineHeight: 1,
+          textShadow: '2px 2px 0 rgba(0,0,0,0.7)',
+        }}
+      >
+        PLAYHUBGX
+      </span>
+      <span
+        className="font-lcd text-white/70 tracking-[0.24em] mt-1"
+        style={{ fontSize: 'clamp(10px,1.2vw,13px)' }}
+      >
+        PSX BIOS LOADER · NTSC · CHD
+      </span>
+    </div>
+  )
+}
+
+function IconBlock({ icon, loaded, fileName, emptyLabel, formatTag, children }) {
   return (
     <div
       className="relative flex flex-col items-center"
@@ -296,6 +334,19 @@ function IconBlock({ icon, loaded, fileName, emptyLabel, children }) {
       >
         {icon}
       </div>
+      {formatTag && (
+        <div
+          className="font-ps font-black tracking-[0.18em] text-white/85 text-center"
+          style={{
+            fontSize: 'clamp(9px,1.05vw,12px)',
+            padding: '2px 8px',
+            background: 'rgba(0,0,0,0.35)',
+            border: '1px solid rgba(255,255,255,0.15)',
+          }}
+        >
+          {formatTag}
+        </div>
+      )}
       <div className="w-full">{children}</div>
       <div
         className="w-full font-lcd text-[clamp(11px,1.3vw,15px)] text-white tracking-widest truncate text-center"
