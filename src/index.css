@@ -205,6 +205,129 @@ html.crt-off .crt-overlay { display: none; }
   letter-spacing: 0.12em;
 }
 
+/* ---------- Disc lid ----------
+ * Circular raised dome that dominates the top of an SCPH-1001.
+ * Concentric grooves + radial shading mimic the injection-molded lid.
+ */
+.ps1-disc-lid {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #eae9e3 0%, #cbcac4 55%, #989792 100%);
+  box-shadow:
+    inset 0 4px 10px rgba(255, 255, 255, 0.55),
+    inset 0 -10px 22px rgba(0, 0, 0, 0.28),
+    0 10px 22px rgba(0, 0, 0, 0.45);
+  border: 1px solid #8a8984;
+}
+
+/* Concentric groove — the seam where the lid meets the body. */
+.ps1-disc-lid::before {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+}
+
+/* Inner disc impression — centred boss where the spindle would sit. */
+.ps1-disc-lid::after {
+  content: '';
+  position: absolute;
+  inset: 30%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #d4d3cd 0%, #b5b4ae 80%);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.22),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+
+/* ---------- PS two-letter logo ----------
+ * Stylised take on the PS1 "PS" logo: a yellow/orange block "P" and a red
+ * block "S" slightly overlapping. Not a 1:1 of the real 3D logo but reads as
+ * PlayStation instantly at a small size.
+ */
+.ps1-logo-p {
+  color: #f4c02a;
+  text-shadow:
+    1px 1px 0 #a87800,
+    2px 2px 0 #7a5500,
+    0 0 6px rgba(244, 192, 42, 0.25);
+}
+.ps1-logo-s {
+  color: #d4242a;
+  text-shadow:
+    1px 1px 0 #7a0e12,
+    2px 2px 0 #4a0508,
+    0 0 6px rgba(212, 36, 42, 0.25);
+}
+
+/* "PlayStation"-style wordmark (italic, silkscreen gray on plastic). */
+.ps1-wordmark {
+  font-family: 'Chakra Petch', 'Eurostile', sans-serif;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #3a3a38;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+/* Recessed rectangular port (memory card / controller) inside the front
+ * lip. Used with an optional inner icon slot. */
+.ps1-port {
+  background: #0d0d0d;
+  border: 1px solid #2a2a2a;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Small black "OPEN" momentary button on the disc lid. */
+.ps1-open-button {
+  background: linear-gradient(180deg, #3a3a37 0%, #1e1e1c 100%);
+  border: 1px solid #111;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6),
+    0 2px 3px rgba(0, 0, 0, 0.45);
+  color: #d8d7d1;
+}
+
+/* Physical POWER toggle (rectangular, red cap, slightly domed). */
+.ps1-power-switch {
+  background: linear-gradient(180deg, #d0393c 0%, #a02022 100%);
+  border: 1px solid #6a1012;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.45),
+    0 2px 3px rgba(0, 0, 0, 0.5);
+}
+.ps1-power-switch.is-on {
+  background: linear-gradient(180deg, #e95254 0%, #b92628 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.45),
+    0 0 10px rgba(233, 82, 84, 0.55),
+    0 2px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Rectangular RESET / OPEN-style button (dark gray). */
+.ps1-button-dark {
+  background: linear-gradient(180deg, #4a4a47 0%, #2b2b29 100%);
+  border: 1px solid #1a1a18;
+  color: #e2e1db;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6),
+    0 2px 3px rgba(0, 0, 0, 0.45);
+}
+
 /* ---------- Disc Lid Shadow ---------- */
 .disc-lid {
   box-shadow:

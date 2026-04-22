@@ -7,11 +7,12 @@ import { useGamepad } from './hooks/useGamepad'
 /**
  * PS1 console shell.
  *
- * The page is styled to read as a physical SCPH-1001-style PlayStation 1
- * sitting on a desk: light warm gray plastic shell with a dark disc-lid
- * area at the top, a front face with POWER (red), RESET (black) and OPEN
- * (gray) buttons, a small PS logo, and a screen "well" cut into the front
- * that hosts the emulator UI when powered on.
+ * The page is styled as a physical Sony PlayStation (SCPH-1001): a light
+ * warm-gray plastic box whose top face hosts the iconic circular disc lid
+ * (with its "OPEN" button), the two-letter "PS" logo and a "PlayStation"
+ * silkscreen wordmark. The functional TV screen lives inside a recessed
+ * black well. The front face carries MEMORY CARD 1/2 slots, CONTROLLER 1/2
+ * ports, a rectangular red POWER switch and a dark RESET button.
  */
 function App() {
   const [isPoweredOn, setIsPoweredOn] = useState(false)
@@ -26,38 +27,52 @@ function App() {
     <div className="min-h-screen flex items-center justify-center p-6">
       <CRTOverlay />
 
-      {/* Outer plastic shell */}
       <div className="w-full max-w-5xl relative animate-fade-in">
         <div className="ps1-shell ps1-plastic-texture rounded-md overflow-hidden">
 
-          {/* ---------- Disc lid (top dark plastic slab) ---------- */}
-          <div className="ps1-shell-dark px-6 py-4 border-b border-ps1-plastic-seam flex items-center justify-between">
-            <div className="flex items-center gap-3 select-none">
-              {/* PS logo in the four face-button colours */}
-              <div className="flex items-baseline">
-                <span className="font-ps font-bold text-ps1-cross text-[22px] leading-none drop-shadow-sm">P</span>
-                <span className="font-ps font-bold text-ps1-circle text-[22px] leading-none drop-shadow-sm">S</span>
+          {/* ===== Top face ===== */}
+          <div className="relative px-8 pt-6 pb-5 border-b border-ps1-plastic-seam/70 bg-ps1-plastic">
+            <div className="flex items-start justify-between gap-6">
+
+              {/* Left: PS logo + wordmark + model label */}
+              <div className="flex flex-col gap-2 pt-2 select-none">
+                <div className="flex items-end gap-1 leading-none">
+                  <span className="ps1-logo-p font-ps font-black text-[52px] leading-[0.8]">P</span>
+                  <span className="ps1-logo-s font-ps font-black text-[52px] leading-[0.8] -ml-3">S</span>
+                </div>
+                <div className="ps1-wordmark text-[22px] leading-none">PlayStation</div>
+                <div className="font-retro text-[8px] ps1-silkscreen tracking-[0.2em] mt-1">
+                  PlayHubGX · SCPH-HUB
+                </div>
               </div>
-              <div className="h-5 w-px bg-ps1-plastic-seam/80" />
-              <span className="font-ps font-semibold text-[13px] ps1-silkscreen tracking-[0.3em]">
-                PlayHubGX
-              </span>
+
+              {/* Right: disc lid */}
+              <div className="relative w-[180px] shrink-0">
+                <div className="ps1-disc-lid w-full">
+                  {/* OPEN button pinned to the top-right of the lid */}
+                  <button
+                    type="button"
+                    onClick={() => { /* cosmetic */ }}
+                    className="ps1-open-button absolute top-3 right-3 px-2 py-[3px] rounded-[2px] font-retro text-[7px] tracking-[0.2em] active:translate-y-[1px]"
+                    aria-label="OPEN disc lid"
+                  >
+                    OPEN
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            {/* Gamepad indicator absolute top-right so it doesn't compete with the lid */}
+            <div className="absolute top-3 left-3">
               <GamepadIndicator
                 isConnected={gamepadState.isConnected}
                 gamepadId={gamepadState.gamepadId}
                 inputSource={gamepadState.isConnected ? 'gamepad' : 'keyboard'}
               />
-              {/* Model label like the original silkscreen on the lid */}
-              <span className="font-retro text-[7px] ps1-silkscreen hidden sm:inline">
-                SCPH-HUB
-              </span>
             </div>
           </div>
 
-          {/* ---------- Screen well (emulator / off-screen) ---------- */}
+          {/* ===== Screen well (functional TV image) ===== */}
           <div className="px-8 py-6 bg-ps1-plastic">
             <div className="mx-auto" style={{ maxWidth: '820px' }}>
               <div className="ps1-well rounded-sm p-4">
@@ -70,7 +85,6 @@ function App() {
                     className="relative w-full overflow-hidden animate-fade-in"
                     style={{ aspectRatio: '4/3' }}
                   >
-                    {/* Faint inner grid */}
                     <div
                       className="absolute inset-0 opacity-25"
                       style={{
@@ -95,50 +109,35 @@ function App() {
             </div>
           </div>
 
-          {/* ---------- Front face (POWER / RESET / OPEN row) ---------- */}
-          <div className="ps1-shell-dark border-t border-ps1-plastic-seam/70 px-8 py-4">
-            <div className="flex items-center justify-between gap-6">
+          {/* ===== Front face (memory cards / controllers / switches) ===== */}
+          <div className="bg-ps1-plastic border-t border-ps1-plastic-seam/60">
+            <div className="px-8 pt-4 pb-5 flex items-end justify-between gap-6">
 
-              {/* Vents (decorative slats like on the real shell) */}
-              <div className="ps1-vents h-6 flex-1 rounded-sm opacity-70" />
-
-              {/* Buttons row */}
-              <div className="flex items-end gap-6">
-                <FaceButton
-                  color="power"
-                  active={isPoweredOn}
-                  label="POWER"
-                  onClick={handlePowerToggle}
-                />
-                <FaceButton
-                  color="reset"
-                  label="RESET"
-                  onClick={() => isPoweredOn && handlePowerToggle()}
-                />
-                <FaceButton
-                  color="open"
-                  label="OPEN"
-                  onClick={() => { /* cosmetic; disc is abstracted */ }}
-                />
+              {/* Left column: memory card + controller stack */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <CardSlot label="MEMORY CARD 1" />
+                  <CardSlot label="MEMORY CARD 2" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <ControllerPort label="CONTROLLER 1" />
+                  <ControllerPort label="CONTROLLER 2" />
+                </div>
               </div>
 
-              <div className="ps1-vents h-6 flex-1 rounded-sm opacity-70" />
-            </div>
-          </div>
-
-          {/* ---------- Bottom lip (memory card / controller ports silkscreen) ---------- */}
-          <div className="bg-ps1-plastic-dark border-t border-ps1-plastic-seam px-6 py-2">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <PortSlot label="MEMORY CARD 1" />
-                <PortSlot label="MEMORY CARD 2" />
+              {/* Middle: vents */}
+              <div className="hidden md:block flex-1 self-stretch">
+                <div className="ps1-vents h-full w-full opacity-70 rounded-sm" />
               </div>
-              <span className="font-retro text-[7px] ps1-silkscreen">
-                32 BIT RISC CPU
-              </span>
-              <div className="flex items-center gap-3">
-                <PortSlot label="CONTROLLER 1" />
-                <PortSlot label="CONTROLLER 2" />
+
+              {/* Right column: POWER + RESET */}
+              <div className="flex items-center gap-4">
+                <PowerSwitch active={isPoweredOn} onClick={handlePowerToggle} />
+                <ResetButton
+                  onClick={() => {
+                    if (isPoweredOn) handlePowerToggle()
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -149,63 +148,67 @@ function App() {
   )
 }
 
-function FaceButton({ color, active, label, onClick }) {
-  const palette = (() => {
-    switch (color) {
-      case 'power':
-        return {
-          body: active
-            ? 'bg-ps1-power-red-h'
-            : 'bg-ps1-power-red hover:bg-ps1-power-red-h',
-          ring: 'border-ps1-plastic-seam',
-          led: active ? 'bg-ps1-led-green shadow-[0_0_8px_rgba(68,204,102,0.7)]' : 'bg-ps1-led-red',
-          text: 'text-ps1-plastic-light',
-        }
-      case 'reset':
-        return {
-          body: 'bg-ps1-reset-black hover:bg-black',
-          ring: 'border-ps1-plastic-seam',
-          led: 'bg-ps1-led-red/60',
-          text: 'text-ps1-plastic-light',
-        }
-      case 'open':
-      default:
-        return {
-          body: 'bg-ps1-open-gray hover:bg-ps1-plastic-light',
-          ring: 'border-ps1-plastic-seam',
-          led: 'bg-ps1-plastic-dark',
-          text: 'text-ps1-ink',
-        }
-    }
-  })()
+function CardSlot({ label }) {
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <div className="ps1-port w-[90px] h-[18px] rounded-[2px] relative flex items-center">
+        {/* fake memory card pin strip */}
+        <div className="absolute inset-y-1 left-1 right-1 rounded-[1px] opacity-70"
+             style={{
+               backgroundImage:
+                 'repeating-linear-gradient(90deg, rgba(210,210,200,0.4) 0 2px, transparent 2px 5px)',
+             }}
+        />
+      </div>
+      <span className="font-retro text-[6px] ps1-silkscreen tracking-[0.18em]">{label}</span>
+    </div>
+  )
+}
 
+function ControllerPort({ label }) {
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <div className="ps1-port w-[90px] h-[22px] rounded-t-full rounded-b-[3px] relative overflow-hidden">
+        {/* row of fake contact pins */}
+        <div className="absolute inset-x-3 top-1/2 -translate-y-1/2 flex items-center justify-between">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <span key={i} className="w-[2px] h-[8px] bg-[#c9b97a]/60 rounded-[1px]" />
+          ))}
+        </div>
+      </div>
+      <span className="font-retro text-[6px] ps1-silkscreen tracking-[0.18em]">{label}</span>
+    </div>
+  )
+}
+
+function PowerSwitch({ active, onClick }) {
   return (
     <div className="flex flex-col items-center gap-1">
       <button
         type="button"
         onClick={onClick}
-        className={`
-          w-10 h-10 rounded-full border-2 ${palette.ring} ${palette.body}
-          shadow-[inset_1px_1px_0_rgba(255,255,255,0.25),inset_-1px_-1px_0_rgba(0,0,0,0.35),0_2px_4px_rgba(0,0,0,0.5)]
-          active:translate-y-0.5 active:shadow-inner
-          transition-all
-        `}
-        aria-label={label}
+        className={`ps1-power-switch ${active ? 'is-on' : ''} w-[52px] h-[22px] rounded-[3px] active:translate-y-[1px]`}
+        aria-label="POWER"
       >
-        <span className={`block w-1.5 h-1.5 mx-auto rounded-full ${palette.led}`} />
+        <span className="sr-only">Power</span>
       </button>
-      <span className={`font-retro text-[7px] tracking-widest ${palette.text} ps1-silkscreen`}>
-        {label}
-      </span>
+      <span className="font-retro text-[7px] ps1-silkscreen tracking-[0.22em]">POWER</span>
     </div>
   )
 }
 
-function PortSlot({ label }) {
+function ResetButton({ onClick }) {
   return (
-    <div className="flex items-center gap-2" title={label}>
-      <span className="inline-block w-6 h-2 rounded-[1px] bg-ps1-inner border border-ps1-plastic-seam/60" />
-      <span className="font-retro text-[6px] ps1-silkscreen hidden md:inline">{label}</span>
+    <div className="flex flex-col items-center gap-1">
+      <button
+        type="button"
+        onClick={onClick}
+        className="ps1-button-dark w-[52px] h-[22px] rounded-[3px] active:translate-y-[1px] font-retro text-[7px] tracking-[0.22em]"
+        aria-label="RESET"
+      >
+        RESET
+      </button>
+      <span className="font-retro text-[7px] ps1-silkscreen tracking-[0.22em]">RESET</span>
     </div>
   )
 }
