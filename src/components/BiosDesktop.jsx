@@ -1,3 +1,5 @@
+import Model3D from './Model3D'
+
 /**
  * BiosDesktop — full-screen re-skin of the PS1 "Memory Card Manager" BIOS.
  *
@@ -8,8 +10,8 @@
  *   · central action buttons:     tostado / tan (#c8a95a) with burgundy text
  *   · confirm pills:              red (#d71a1a) and blue (#1a4ed7)
  *
- * The BIOS icons (wrench / disc) are rendered as plain emoji per request;
- * the previous CSS 3D versions have been retired.
+ * BIOS icons (wrench / disc) are rendered as GLB models via <Model3D>,
+ * auto-spinning inside each slot.
  */
 
 function SlotPanel({ slot, numberColor, loaded, icon }) {
@@ -211,7 +213,7 @@ export default function BiosDesktop({
         {/* Two side blocks: wrench+LOAD BIOS | disc+LOAD GAME */}
         <div className="flex-1 min-h-0 flex items-center justify-center gap-[clamp(14px,3vw,48px)]">
           <IconBlock
-            icon="🔧"
+            icon={<Model3D url="/models/wrench.glb" speed={0.5} />}
             accent="green"
             loaded={biosLoaded}
             fileName={biosFile?.name}
@@ -224,7 +226,7 @@ export default function BiosDesktop({
           </IconBlock>
 
           <IconBlock
-            icon="💿"
+            icon={<Model3D url="/models/cd-rom.glb" speed={0.6} />}
             accent="yellow"
             loaded={gameLoaded}
             fileName={romFiles[0]?.name}
@@ -321,15 +323,10 @@ function IconBlock({ icon, loaded, fileName, emptyLabel, formatTag, children }) 
       }}
     >
       <div
-        className="select-none"
+        className="select-none w-full"
         style={{
-          fontSize: 'clamp(54px, 9vw, 130px)',
-          lineHeight: 1,
-          textShadow: loaded ? '3px 3px 0 rgba(0,0,0,0.55)' : '3px 3px 0 rgba(0,0,0,0.55)',
+          height: 'clamp(110px, 16vw, 200px)',
           filter: loaded ? 'none' : 'grayscale(0.4) opacity(0.85)',
-          imageRendering: 'pixelated',
-          WebkitFontSmoothing: 'none',
-          fontSmooth: 'never',
         }}
       >
         {icon}
