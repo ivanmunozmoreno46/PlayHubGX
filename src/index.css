@@ -8,14 +8,67 @@
   box-sizing: border-box;
 }
 
+html, body {
+  height: 100%;
+}
+
 body {
-  @apply bg-ps1-dark font-sans;
+  @apply bg-ps1-plastic-shadow font-ps text-ps1-ink;
+  /* Default image rendering is pixelated for the emulator canvas; the UI
+     overrides this where it would otherwise blur text. */
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
 }
 
-/* PS1 Circular Button Styles */
+/* ---------- Desk-style ambient background ----------
+ * Soft neutral gradient so the plastic PS1 shell reads as a physical object
+ * sitting on a desk rather than a floating panel.
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(255, 255, 255, 0.06), transparent 55%),
+    radial-gradient(ellipse at 80% 90%, rgba(0, 0, 0, 0.25), transparent 60%),
+    linear-gradient(180deg, #4a4944 0%, #2e2d29 100%);
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+}
+
+/* ---------- Typography refinements ---------- */
+.font-retro {
+  /* Press Start 2P is naturally pixelated; disable subpixel AA for crisp edges. */
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+.font-ps, .font-display {
+  /* Chakra Petch looks best with standard AA and slight tracking. */
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.02em;
+}
+.font-lcd {
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.04em;
+}
+
+.glow-cyan {
+  text-shadow:
+    0 0 6px rgba(0, 204, 255, 0.55),
+    0 0 14px rgba(0, 204, 255, 0.30);
+}
+.glow-yellow {
+  text-shadow: 0 0 8px rgba(255, 204, 51, 0.55);
+}
+
+/* ---------- PS1 circular power button ---------- */
 .ps1-circle-btn {
   border-radius: 50%;
   transition: all 0.15s ease;
@@ -26,72 +79,379 @@ body {
   box-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
 }
 
-/* LED Blink Animation */
+/* ---------- LED blink ---------- */
 @keyframes led-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
+.led-blink { animation: led-blink 1s infinite; }
 
-.led-blink {
-  animation: led-blink 1s infinite;
-}
-
-/* Cursor Blink Animation */
 @keyframes cursor-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
+.cursor-blink { animation: cursor-blink 0.5s infinite; }
 
-.cursor-blink {
-  animation: cursor-blink 0.5s infinite;
-}
+/* ---------- CRT Overlay ----------
+ * Full-screen scanlines + vignette + subtle chromatic fringe, rendered as
+ * a non-interactive overlay on top of everything. Toggled on/off by the
+ * `.crt-on` class on <html> (see CRTOverlay.jsx). The overlay itself lives
+ * in React so it can host the curvature tint; these selectors only drive
+ * visibility.
+ */
+html.crt-off .crt-overlay { display: none; }
 
-/* CRT Scanlines Effect */
-.crt-scanlines::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+.crt-scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
   background: repeating-linear-gradient(
     0deg,
-    rgba(0, 0, 0, 0.15),
-    rgba(0, 0, 0, 0.15) 1px,
+    rgba(0, 0, 0, 0.22),
+    rgba(0, 0, 0, 0.22) 1px,
     transparent 1px,
-    transparent 2px
+    transparent 3px
   );
+  mix-blend-mode: multiply;
+}
+
+.crt-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 101;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 55%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+
+.crt-fringe {
+  /* Very subtle chromatic aberration */
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 102;
+  box-shadow:
+    inset  2px 0 0 rgba(255, 40, 40, 0.04),
+    inset -2px 0 0 rgba(40, 200, 255, 0.04);
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.985; }
+}
+.crt-flicker { animation: flicker 0.15s infinite; }
+
+/* ---------- Plastic texture ----------
+ * Classic PS1 shell: light warm gray with a very subtle speckle pattern so
+ * the plastic doesn't read as flat. Applied as a background-image on top of
+ * whatever base colour the element already has.
+ */
+.ps1-plastic-texture {
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm3-2h1v1H4V1zM2 5h1v1H2V5z' fill='%23000' fill-opacity='0.04' fill-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+/* Main shell surface: warm gray plastic with top-left highlight and
+ * bottom-right shadow so the box reads as a molded object. Compose with
+ * `ps1-plastic-texture` for the speckle. */
+.ps1-shell {
+  background: linear-gradient(160deg, #d9d8d2 0%, #c9c8c2 45%, #b1b0aa 100%);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.7),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.22),
+    0 10px 30px rgba(0, 0, 0, 0.45);
+  border: 1px solid #8a8984;
+}
+
+/* Darker plastic panel (seams, disc lid trim). */
+.ps1-shell-dark {
+  background: linear-gradient(160deg, #a8a7a2 0%, #8d8c87 100%);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.35),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* Recessed area — screen well, memory card slot, disc well. Inside is
+ * near-black with soft top-inner shadow. */
+.ps1-well {
+  background: radial-gradient(ellipse at 50% 0%, #1f1f1f 0%, #0a0a0a 90%);
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.8),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    inset 1px 0 0 rgba(0, 0, 0, 0.6),
+    inset -1px 0 0 rgba(0, 0, 0, 0.6);
+  border: 1px solid #3a3a3a;
+}
+
+/* Horizontal plastic seam (vent slats). */
+.ps1-vents {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.35) 0px,
+    rgba(0, 0, 0, 0.35) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+}
+
+/* Silkscreen-style label printed on the plastic (e.g. "POWER", "RESET"). */
+.ps1-silkscreen {
+  color: #4a4a48;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.12em;
+}
+
+/* ---------- Disc lid ----------
+ * Circular raised dome that dominates the top of an SCPH-1001.
+ * Concentric grooves + radial shading mimic the injection-molded lid.
+ */
+.ps1-disc-lid {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #eae9e3 0%, #cbcac4 55%, #989792 100%);
+  box-shadow:
+    inset 0 4px 10px rgba(255, 255, 255, 0.55),
+    inset 0 -10px 22px rgba(0, 0, 0, 0.28),
+    0 10px 22px rgba(0, 0, 0, 0.45);
+  border: 1px solid #8a8984;
+}
+
+/* Concentric groove — the seam where the lid meets the body. */
+.ps1-disc-lid::before {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22);
   pointer-events: none;
 }
 
-/* CRT Screen Flicker */
-@keyframes flicker {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.98; }
+/* Inner disc impression — centred boss where the spindle would sit. */
+.ps1-disc-lid::after {
+  content: '';
+  position: absolute;
+  inset: 30%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #d4d3cd 0%, #b5b4ae 80%);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.22),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.5);
+  pointer-events: none;
 }
 
-.crt-flicker {
-  animation: flicker 0.15s infinite;
+/* ---------- PS two-letter logo ----------
+ * Stylised take on the PS1 "PS" logo: a yellow/orange block "P" and a red
+ * block "S" slightly overlapping. Not a 1:1 of the real 3D logo but reads as
+ * PlayStation instantly at a small size.
+ */
+.ps1-logo-p {
+  color: #f4c02a;
+  text-shadow:
+    1px 1px 0 #a87800,
+    2px 2px 0 #7a5500,
+    0 0 6px rgba(244, 192, 42, 0.25);
+}
+.ps1-logo-s {
+  color: #d4242a;
+  text-shadow:
+    1px 1px 0 #7a0e12,
+    2px 2px 0 #4a0508,
+    0 0 6px rgba(212, 36, 42, 0.25);
 }
 
-/* PS1 Plastic Texture */
-.ps1-plastic {
-  background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23000' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+/* "PlayStation"-style wordmark (italic, silkscreen gray on plastic). */
+.ps1-wordmark {
+  font-family: 'Chakra Petch', 'Eurostile', sans-serif;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #3a3a38;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
-/* Disc Lid Shadow */
+/* Recessed rectangular port (memory card / controller) inside the front
+ * lip. Used with an optional inner icon slot. */
+.ps1-port {
+  background: #0d0d0d;
+  border: 1px solid #2a2a2a;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Small black "OPEN" momentary button on the disc lid. */
+.ps1-open-button {
+  background: linear-gradient(180deg, #3a3a37 0%, #1e1e1c 100%);
+  border: 1px solid #111;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6),
+    0 2px 3px rgba(0, 0, 0, 0.45);
+  color: #d8d7d1;
+}
+
+/* Physical POWER toggle (rectangular, red cap, slightly domed). */
+.ps1-power-switch {
+  background: linear-gradient(180deg, #d0393c 0%, #a02022 100%);
+  border: 1px solid #6a1012;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.45),
+    0 2px 3px rgba(0, 0, 0, 0.5);
+}
+.ps1-power-switch.is-on {
+  background: linear-gradient(180deg, #e95254 0%, #b92628 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.45),
+    0 0 10px rgba(233, 82, 84, 0.55),
+    0 2px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Rectangular RESET / OPEN-style button (dark gray). */
+.ps1-button-dark {
+  background: linear-gradient(180deg, #4a4a47 0%, #2b2b29 100%);
+  border: 1px solid #1a1a18;
+  color: #e2e1db;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6),
+    0 2px 3px rgba(0, 0, 0, 0.45);
+}
+
+/* Large round dark button recessed into the plastic — POWER / RESET caps. */
+.ps1-round-button {
+  background: radial-gradient(circle at 35% 30%, #5a5956 0%, #2e2d2b 60%, #1a1a18 100%);
+  border: 1px solid #0f0f0e;
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.22),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.65),
+    0 4px 8px rgba(0, 0, 0, 0.55),
+    0 0 0 2px rgba(0, 0, 0, 0.35);
+  transition: box-shadow 0.15s ease, transform 0.08s ease;
+}
+.ps1-round-button:hover {
+  background: radial-gradient(circle at 35% 30%, #68676463 0%, #343331 60%, #1d1c1a 100%);
+}
+.ps1-round-button:active {
+  box-shadow:
+    inset 0 3px 5px rgba(0, 0, 0, 0.75),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.4);
+}
+.ps1-round-button.is-on-green {
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.25),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.65),
+    0 4px 8px rgba(0, 0, 0, 0.55),
+    0 0 0 2px rgba(0, 0, 0, 0.35),
+    0 0 14px rgba(87, 227, 138, 0.55);
+}
+
+/* ---------- BIOS Memory Card Manager skin ---------- */
+/* Dark maroon/brown slot panel shown top-left and top-right. */
+.ps1-bios-slot-panel {
+  position: relative;
+  background: linear-gradient(180deg, #3a1e20 0%, #1e0f10 100%);
+  border-top: 2px solid #7a3335;
+  border-bottom: 2px solid #0a0404;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    2px 2px 0 rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+/* Tan action-menu button. */
+.ps1-bios-action {
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 210, 0.35),
+    inset 0 -1px 0 rgba(70, 45, 5, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: filter 0.12s ease, transform 0.08s ease;
+}
+.ps1-bios-action:hover {
+  filter: brightness(1.08);
+}
+.ps1-bios-action:active {
+  transform: translateY(1px);
+}
+
+/* Small confirm-style pill (YES / NO / EXIT look). */
+.ps1-bios-pill {
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 2px 0 rgba(0, 0, 0, 0.45),
+    0 3px 6px rgba(0, 0, 0, 0.35);
+  transition: filter 0.12s ease, transform 0.08s ease;
+}
+.ps1-bios-pill:hover {
+  filter: brightness(1.1);
+}
+.ps1-bios-pill:active {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- 3D BIOS objects (wrench / disc) ---------- */
+/* A perspective stage that makes rotateY() on children read as 3D. */
+.stage-3d {
+  perspective: 700px;
+  perspective-origin: 50% 50%;
+}
+.spin-y {
+  animation: spin-y 8s linear infinite;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.spin-y-reverse {
+  animation: spin-y 10s linear infinite reverse;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+@keyframes spin-y {
+  from { transform: rotateY(0deg); }
+  to   { transform: rotateY(360deg); }
+}
+
+/* ---------- Disc Lid Shadow ---------- */
 .disc-lid {
-  box-shadow: 
+  box-shadow:
     inset 0 2px 8px rgba(0,0,0,0.15),
     0 4px 12px rgba(0,0,0,0.1),
     inset 0 0 0 2px rgba(255,255,255,0.1);
 }
 
-/* Button Glow Effect */
-.btn-glow-green {
-  text-shadow: 0 0 10px rgba(0,204,102,0.6);
+/* ---------- Button glows ---------- */
+.btn-glow-green { text-shadow: 0 0 10px rgba(0,204,102,0.6); }
+.btn-glow-blue  { text-shadow: 0 0 10px rgba(59,130,246,0.6); }
+.btn-glow-cyan  { text-shadow: 0 0 10px rgba(0, 204, 255, 0.7); }
+
+/* ---------- PS1 loading diamond ---------- */
+.ps1-loader {
+  width: 28px;
+  height: 28px;
+  transform-origin: center;
+  background: linear-gradient(135deg, #00ccff 0%, #7fd8ff 50%, #ffcc33 100%);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  filter: drop-shadow(0 0 8px rgba(0,204,255,0.55));
+  animation: spin-diamond 1.4s ease-in-out infinite;
 }
 
-.btn-glow-blue {
-  text-shadow: 0 0 10px rgba(59,130,246,0.6);
+@keyframes spin-diamond {
+  0%   { transform: rotate(0deg)   scale(1);    }
+  50%  { transform: rotate(180deg) scale(1.08); }
+  100% { transform: rotate(360deg) scale(1);    }
 }

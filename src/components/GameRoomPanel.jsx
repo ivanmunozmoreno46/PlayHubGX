@@ -1,81 +1,225 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import GuestControlsPanel from './GuestControlsPanel'
 import { loadBindings, saveBindings } from '../lib/guestControls'
+import { GAME_ROOM_GAMEPAD_MAP } from '../hooks/useGameRoom'
 
 /**
  * UI panel for the Host-Client streaming Game Room (see useGameRoom).
  *
- * The host sees a big copyable room code, a status/latency badge and a
- * stop button. The guest sees a code input on entry, then a <video> element
- * that plays the host's stream (muted by default, with a button to unmute).
- *
- * Guests can drive Player 2 with either the keyboard or a Web Gamepad API
- * device (USB/Bluetooth pad). The guest polls the pad on every animation
- * frame and only forwards *changes* through the PeerJS DataChannel so the
- * host receives the same kind of discrete events as keyboard input.
+ * Visual language matches the PS1 BIOS Memory Card Manager desktop used in
+ * the rest of the app: flat light-beige container, tan/burgundy action
+ * buttons, red/green/blue confirm pills with hard 2px bevels, and LCD-green
+ * digits for the room code.
  */
 
-// Deadzone applied to analog stick inputs on the guest side. Raw values
-// below this threshold are snapped to zero so small stick jitter doesn't
-// saturate the DataChannel.
+// Deadzone applied to analog stick inputs on the guest side.
 const GAMEPAD_AXIS_DEADZONE = 0.15
-// Minimum absolute delta (after deadzone) required before we forward an
-// axis update to the host. Keeps the channel quiet when the stick is
-// fully deflected and only noisy on the analog-to-digital boundary.
 const GAMEPAD_AXIS_EPSILON = 0.03
-// Analog trigger buttons (LT/RT = indices 6/7) already come through as
-// digital in the Standard Gamepad mapping — their `.pressed` flag is true
-// past ~0.5. We rely on `.pressed` rather than `.value` to keep the host
-// path simple.
 
 function applyDeadzone(value) {
   if (Math.abs(value) < GAMEPAD_AXIS_DEADZONE) return 0
-  // Rescale so the usable range starts at the deadzone edge (feels more
-  // responsive than a hard cutoff).
   const sign = value < 0 ? -1 : 1
   const scaled = (Math.abs(value) - GAMEPAD_AXIS_DEADZONE) / (1 - GAMEPAD_AXIS_DEADZONE)
   return sign * Math.max(0, Math.min(1, scaled))
+}
+
+/* -------------------- Shared flat BIOS-style helpers -------------------- */
+
+const HEADER_TEXT = '#2a0a0a'
+const BODY_TEXT = '#3a3c42'
+const MUTED_TEXT = '#5a5c62'
+
+function PanelShell({ children }) {
+  return (
+    <div
+      className="w-full"
+      style={{
+        padding: 'clamp(12px, 2vw, 20px)',
+        background: '#c4c6cc',
+        color: BODY_TEXT,
+        imageRendering: 'pixelated',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function InsetBlock({ children, className = '' }) {
+  return (
+    <div
+      className={className}
+      style={{
+        background: '#b0b2b8',
+        borderTop: '2px solid #5a5c62',
+        borderLeft: '2px solid #5a5c62',
+        borderRight: '2px solid #e4e6ea',
+        borderBottom: '2px solid #e4e6ea',
+        padding: 'clamp(8px, 1.2vw, 12px)',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function TanButton({ children, onClick, disabled = false, strong = false, className = '' }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`font-ps font-black tracking-[0.28em] uppercase text-center ${disabled ? 'opacity-40 pointer-events-none' : ''} ${className}`}
+      style={{
+        background: strong ? '#d8a833' : '#b48a2a',
+        borderTop: '2px solid #f2dc92',
+        borderLeft: '2px solid #f2dc92',
+        borderRight: '2px solid #5a3f08',
+        borderBottom: '2px solid #5a3f08',
+        padding: 'clamp(8px,1.4vh,12px) clamp(14px,2vw,22px)',
+        color: HEADER_TEXT,
+        fontSize: 'clamp(11px, 1.3vw, 14px)',
+        textShadow: '1px 1px 0 rgba(255,240,190,0.35)',
+        imageRendering: 'pixelated',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+function Pill({ children, onClick, color = 'red', disabled = false, className = '', title }) {
+  const bg = { red: '#d71a1a', blue: '#1a4ed7', green: '#1ba23e', gray: '#55575d' }[color] || '#55575d'
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={`font-ps font-black tracking-[0.22em] uppercase ${disabled ? 'opacity-40 pointer-events-none' : ''} ${className}`}
+      style={{
+        background: bg,
+        color: '#ffffff',
+        borderTop: '2px solid rgba(255,255,255,0.55)',
+        borderLeft: '2px solid rgba(255,255,255,0.55)',
+        borderRight: '2px solid rgba(0,0,0,0.55)',
+        borderBottom: '2px solid rgba(0,0,0,0.55)',
+        padding: 'clamp(6px,1vh,9px) clamp(12px,1.8vw,18px)',
+        fontSize: 'clamp(10px,1.1vw,13px)',
+        imageRendering: 'pixelated',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+function SectionTitle({ children }) {
+  return (
+    <div
+      className="font-ps font-black tracking-[0.28em] uppercase"
+      style={{
+        color: HEADER_TEXT,
+        fontSize: 'clamp(12px, 1.4vw, 15px)',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function Caption({ children, color }) {
+  return (
+    <div
+      className="font-ps tracking-[0.18em] uppercase"
+      style={{
+        color: color || MUTED_TEXT,
+        fontSize: 'clamp(9px, 0.9vw, 11px)',
+      }}
+    >
+      {children}
+    </div>
+  )
 }
 
 function StatusBadge({ status, isHost, guestCount }) {
   const label = (() => {
     switch (status) {
       case 'connecting': return 'CONNECTING'
-      case 'waiting': return isHost ? 'WAITING FOR GUESTS' : 'WAITING'
+      case 'waiting': return isHost ? 'WAITING' : 'WAITING'
       case 'connected': return 'CONNECTED'
       case 'error': return 'ERROR'
-      default: return 'DISCONNECTED'
+      default: return 'OFFLINE'
     }
   })()
-
-  const color = (() => {
-    if (status === 'connected' || (isHost && guestCount > 0)) return 'bg-green-500'
-    if (status === 'waiting' || status === 'connecting') return 'bg-yellow-500'
-    if (status === 'error') return 'bg-red-500'
-    return 'bg-gray-500'
+  const dot = (() => {
+    if (status === 'connected' || (isHost && guestCount > 0)) return '#1ba23e'
+    if (status === 'waiting' || status === 'connecting') return '#d8a833'
+    if (status === 'error') return '#d71a1a'
+    return '#5a5c62'
   })()
-
   return (
-    <div className="flex items-center gap-2 px-2 py-1 rounded bg-ps1-dark border border-ps1-gray">
-      <span className={`w-2 h-2 rounded-full ${color}`} />
-      <span className="font-retro text-[7px] text-gray-200 tracking-wider">{label}</span>
+    <div
+      className="inline-flex items-center gap-1.5"
+      style={{
+        background: '#b0b2b8',
+        borderTop: '2px solid #5a5c62',
+        borderLeft: '2px solid #5a5c62',
+        borderRight: '2px solid #e4e6ea',
+        borderBottom: '2px solid #e4e6ea',
+        padding: '4px 8px',
+      }}
+    >
+      <span className="w-2 h-2" style={{ background: dot }} />
+      <span className="font-ps font-black uppercase tracking-[0.18em]" style={{ color: HEADER_TEXT, fontSize: '9px' }}>{label}</span>
     </div>
   )
 }
 
 function LatencyBadge({ latency }) {
   if (latency == null) return null
-  const color =
-    latency < 80 ? 'text-green-400'
-    : latency < 180 ? 'text-yellow-400'
-    : 'text-red-400'
+  const color = latency < 80 ? '#1ba23e' : latency < 180 ? '#a7841d' : '#d71a1a'
   return (
-    <div className="flex items-center gap-1 px-2 py-1 rounded bg-ps1-dark border border-ps1-gray">
-      <span className="font-retro text-[7px] text-gray-400">PING</span>
-      <span className={`font-retro text-[8px] ${color}`}>{latency}ms</span>
+    <div
+      className="inline-flex items-center gap-1.5"
+      style={{
+        background: '#b0b2b8',
+        borderTop: '2px solid #5a5c62',
+        borderLeft: '2px solid #5a5c62',
+        borderRight: '2px solid #e4e6ea',
+        borderBottom: '2px solid #e4e6ea',
+        padding: '4px 8px',
+      }}
+    >
+      <span className="font-ps tracking-[0.18em]" style={{ color: MUTED_TEXT, fontSize: '9px' }}>PING</span>
+      <span className="font-ps font-black" style={{ color, fontSize: '10px' }}>{latency}ms</span>
     </div>
   )
 }
+
+function ErrorBar({ message }) {
+  if (!message) return null
+  return (
+    <div
+      className="mb-3"
+      style={{
+        background: '#d71a1a',
+        color: '#ffffff',
+        padding: '6px 10px',
+        borderTop: '2px solid rgba(255,255,255,0.55)',
+        borderLeft: '2px solid rgba(255,255,255,0.55)',
+        borderRight: '2px solid rgba(0,0,0,0.55)',
+        borderBottom: '2px solid rgba(0,0,0,0.55)',
+      }}
+    >
+      <span className="font-ps font-black tracking-[0.18em] uppercase" style={{ fontSize: '10px' }}>
+        {message}
+      </span>
+    </div>
+  )
+}
+
+/* ---------------------------- Host view ---------------------------- */
 
 function HostView({ room, onHidePanel }) {
   const {
@@ -105,9 +249,7 @@ function HostView({ room, onHidePanel }) {
       setCopied(true)
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
       copyTimeoutRef.current = setTimeout(() => setCopied(false), 1500)
-    } catch (_) {
-      // Ignore clipboard failures (e.g. insecure context).
-    }
+    } catch (_) { /* ignore */ }
   }, [roomCode])
 
   useEffect(() => () => {
@@ -115,81 +257,64 @@ function HostView({ room, onHidePanel }) {
   }, [])
 
   return (
-    <div className="w-full p-4">
-      {error && (
-        <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-300 text-[8px] font-retro">
-          {error}
-        </div>
-      )}
+    <PanelShell>
+      <ErrorBar message={error} />
 
-      <div className="mb-4 flex items-center justify-between">
-        <div className="font-retro text-[7px] text-gray-400">YOU ARE THE HOST</div>
+      <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <SectionTitle>GAME ROOM · HOST</SectionTitle>
+          <Caption>You are streaming to guests</Caption>
+        </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={status} isHost guestCount={guestCount} />
           {onHidePanel && (
-            <button
-              onClick={onHidePanel}
-              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white font-retro text-[8px] rounded"
-              title="Hide this panel without closing the room"
-            >
-              HIDE PANEL
-            </button>
+            <Pill color="gray" onClick={onHidePanel} title="Hide this panel without closing the room">
+              HIDE
+            </Pill>
           )}
         </div>
       </div>
 
-      <div className="mb-6 text-center">
-        <div className="font-retro text-[7px] text-gray-400 mb-2">ROOM CODE</div>
-        <div className="inline-flex items-center gap-2">
-          <div className="px-6 py-3 bg-ps1-dark border-2 border-green-500 rounded">
-            <span className="font-retro text-lg text-green-400 tracking-[0.3em] select-all">
+      <div className="mb-4 flex flex-col items-center gap-2">
+        <Caption>ROOM CODE</Caption>
+        <div className="flex items-center gap-2">
+          <div
+            className="px-5 py-2"
+            style={{
+              background: '#0b0d12',
+              borderTop: '2px solid #000',
+              borderLeft: '2px solid #000',
+              borderRight: '2px solid #3a3c42',
+              borderBottom: '2px solid #3a3c42',
+            }}
+          >
+            <span className="font-lcd select-all" style={{ color: '#34d15c', fontSize: 'clamp(28px, 3.4vw, 36px)', letterSpacing: '0.22em', lineHeight: 1 }}>
               {roomCode}
             </span>
           </div>
-          <button
-            onClick={handleCopy}
-            className="px-3 py-3 bg-gray-700 hover:bg-gray-600 text-white font-retro text-[8px] rounded"
-            title="Copy room code"
-          >
-            {copied ? 'COPIED' : 'COPY'}
-          </button>
-        </div>
-        <div className="mt-2 font-retro text-[7px] text-gray-500">
-          Share this code with a friend so they can join as Player 2.
+          <TanButton onClick={handleCopy}>{copied ? 'COPIED' : 'COPY'}</TanButton>
         </div>
       </div>
 
-      <div className="mb-6 p-3 bg-ps1-dark rounded border border-ps1-gray">
-        <div className="flex items-center justify-between">
-          <div className="font-retro text-[8px] text-gray-200">GUESTS</div>
-          <div className="font-retro text-[10px] text-green-400">{guestCount}</div>
+      <InsetBlock className="mb-4">
+        <div className="flex items-center justify-between mb-1">
+          <span className="font-ps font-black tracking-[0.22em] uppercase" style={{ color: HEADER_TEXT, fontSize: '11px' }}>GUESTS</span>
+          <span className="font-ps font-black" style={{ color: guestCount > 0 ? '#1ba23e' : MUTED_TEXT, fontSize: '14px' }}>{guestCount}</span>
         </div>
-        <div className="mt-2 font-retro text-[7px] text-gray-400 leading-relaxed">
-          Guests see your game and control Player 2. Your game keeps running locally
-          even if no one is connected. You can hide this panel to play normally —
-          the room stays open in the background.
-        </div>
-      </div>
+        <Caption>Share the code above. Your game keeps running even with no one connected.</Caption>
+      </InsetBlock>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 justify-end">
         {onHidePanel && (
-          <button
-            onClick={onHidePanel}
-            className="flex-1 py-3 px-4 bg-gray-700 hover:bg-gray-600 text-white font-retro text-[9px] rounded"
-          >
-            HIDE PANEL
-          </button>
+          <Pill color="blue" onClick={onHidePanel}>HIDE PANEL</Pill>
         )}
-        <button
-          onClick={leaveRoom}
-          className={`${onHidePanel ? 'flex-1' : 'w-full'} py-3 px-4 bg-red-700 hover:bg-red-600 text-white font-retro text-[9px] rounded`}
-        >
-          CLOSE ROOM
-        </button>
+        <Pill color="red" onClick={leaveRoom}>CLOSE ROOM</Pill>
       </div>
-    </div>
+    </PanelShell>
   )
 }
+
+/* ---------------------------- Guest view --------------------------- */
 
 function GuestView({ room }) {
   const {
@@ -212,25 +337,19 @@ function GuestView({ room }) {
   const videoRef = useRef(null)
   const inputFocusRef = useRef(null)
   const stageRef = useRef(null)
-  // Keep a ref of the latest bindings so the input loops (which run inside
-  // stable effects) can read them without re-subscribing on every edit.
   const bindingsRef = useRef(bindings)
   useEffect(() => {
     bindingsRef.current = bindings
     saveBindings(bindings)
   }, [bindings])
-  // When the controls modal is open we mute local input forwarding so the
-  // keys being captured in the remap dialog don't also reach the host.
   const showControlsRef = useRef(showControls)
   useEffect(() => { showControlsRef.current = showControls }, [showControls])
 
-  // Attach / detach the incoming MediaStream to the <video> element.
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
     if (remoteStream && video.srcObject !== remoteStream) {
       video.srcObject = remoteStream
-      // autoplay muted should succeed even without user interaction.
       const p = video.play()
       if (p && typeof p.catch === 'function') p.catch(() => { /* ignore */ })
     }
@@ -239,20 +358,15 @@ function GuestView({ room }) {
     }
   }, [remoteStream])
 
-  // Forward key events to the host while the guest area is focused. We
-  // translate keyboard codes to libretro RetroPad ids *on the guest* using
-  // the user's custom bindings, then send a generic `pad_button` message.
   useEffect(() => {
     if (!remoteStream) return
     const el = inputFocusRef.current
     if (!el) return
 
     const onKey = (e) => {
-      // Prevent the page from scrolling when the guest uses arrow keys / space.
       if (e.code && e.code.startsWith('Arrow')) e.preventDefault()
       if (e.code === 'Space') e.preventDefault()
       if (e.repeat) return
-      // Let the controls modal capture input while it's open.
       if (showControlsRef.current) return
       const libretroId = bindingsRef.current.keys[e.code]
       if (libretroId === undefined) return
@@ -261,7 +375,6 @@ function GuestView({ room }) {
 
     el.addEventListener('keydown', onKey)
     el.addEventListener('keyup', onKey)
-    // Auto-focus so keys are captured immediately.
     el.focus()
     return () => {
       el.removeEventListener('keydown', onKey)
@@ -269,9 +382,6 @@ function GuestView({ room }) {
     }
   }, [remoteStream, sendInput])
 
-  // Poll the Gamepad API while the stream is active and forward button /
-  // axis changes to the host. We only send *deltas* so pads that are idle
-  // don't spam the DataChannel.
   useEffect(() => {
     if (!remoteStream) {
       setGamepadName(null)
@@ -282,9 +392,7 @@ function GuestView({ room }) {
     }
 
     let rafId = null
-    // Previous digital state per Standard Gamepad button index.
     const prevButtons = new Map()
-    // Previous (post-deadzone) analog value per axis key.
     const prevAxes = { lx: 0, ly: 0, rx: 0, ry: 0 }
     let activeIndex = null
 
@@ -326,7 +434,6 @@ function GuestView({ room }) {
       let pad = null
       if (activeIndex != null) pad = pads[activeIndex] || null
       if (!pad) {
-        // Pick the first connected pad as the active one.
         for (let i = 0; i < pads.length; i++) {
           if (pads[i] && pads[i].connected) {
             pad = pads[i]
@@ -338,10 +445,7 @@ function GuestView({ room }) {
       }
 
       if (pad) {
-        // Suppress pad forwarding while the controls modal is open so button
-        // presses are captured as rebinds instead of driving the host.
         const padActive = !showControlsRef.current
-        // Buttons — only forward on transitions.
         for (let i = 0; i < pad.buttons.length; i++) {
           const libretroId = bindingsRef.current.pad[i]
           const isDown = Boolean(pad.buttons[i] && pad.buttons[i].pressed)
@@ -354,7 +458,6 @@ function GuestView({ room }) {
           }
         }
 
-        // Axes — send every change above the epsilon threshold.
         const axisMap = [
           ['lx', pad.axes[0] || 0],
           ['ly', pad.axes[1] || 0],
@@ -382,8 +485,6 @@ function GuestView({ room }) {
       releaseAll()
       setGamepadName(null)
     }
-  // gamepadName is only used for the initial indicator; adding it to deps
-  // would restart the polling loop whenever the name changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remoteStream, sendInput])
 
@@ -395,7 +496,6 @@ function GuestView({ room }) {
     })
   }, [])
 
-  // Track browser/OS fullscreen state so the button label stays in sync.
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
     document.addEventListener('fullscreenchange', onChange)
@@ -410,76 +510,86 @@ function GuestView({ room }) {
         await document.exitFullscreen()
       } else if (el.requestFullscreen) {
         await el.requestFullscreen()
-        // Keep keyboard focus on the capture area once fullscreen is active.
         setTimeout(() => inputFocusRef.current?.focus(), 50)
       }
-    } catch (_) {
-      /* ignore fullscreen failures */
-    }
+    } catch (_) { /* ignore */ }
   }, [])
 
   // Not connected yet: show the join form.
   if (!roomCode) {
     return (
-      <div className="w-full p-4">
-        {error && (
-          <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-300 text-[8px] font-retro">
-            {error}
-          </div>
-        )}
+      <PanelShell>
+        <ErrorBar message={error} />
 
-        <div className="mb-6 text-center">
-          <h2 className="font-retro text-xs text-ps1-text mb-2">JOIN GAME ROOM</h2>
-          <p className="font-retro text-[7px] text-gray-400">
-            Enter the 6-character code shared by the host.
-          </p>
+        <div className="mb-4 text-center">
+          <SectionTitle>JOIN GAME ROOM</SectionTitle>
+          <Caption>Enter the 6-character code shared by the host</Caption>
         </div>
 
-        <div className="space-y-3 mb-4">
+        <div className="flex flex-col items-center gap-3 mb-4">
           <input
             type="text"
             value={inputCode}
             onChange={(e) => setInputCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-            placeholder="ROOM CODE"
+            placeholder="CODE"
             maxLength={6}
-            className="w-full px-4 py-3 bg-ps1-dark border border-ps1-gray text-ps1-text font-retro text-xs tracking-widest text-center rounded focus:outline-none focus:border-blue-500"
-          />
-          <button
-            onClick={() => {
-              if (inputCode.length === 6) joinRoom(inputCode)
+            className="w-full max-w-xs text-center font-lcd focus:outline-none"
+            style={{
+              background: '#0b0d12',
+              color: '#34d15c',
+              letterSpacing: '0.25em',
+              fontSize: 'clamp(22px, 2.6vw, 30px)',
+              padding: '10px 12px',
+              borderTop: '2px solid #000',
+              borderLeft: '2px solid #000',
+              borderRight: '2px solid #3a3c42',
+              borderBottom: '2px solid #3a3c42',
             }}
+          />
+          <TanButton
+            strong
+            onClick={() => { if (inputCode.length === 6) joinRoom(inputCode) }}
             disabled={inputCode.length !== 6}
-            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-retro text-[9px] rounded"
           >
             JOIN ROOM
-          </button>
+          </TanButton>
         </div>
 
-        <div className="p-3 bg-ps1-dark rounded border border-ps1-gray">
-          <p className="font-retro text-[7px] text-gray-400 leading-relaxed">
-            You will see the host's game streamed to your browser. Your keyboard inputs
-            will control Player 2 on the host's console.
-          </p>
-        </div>
-      </div>
+        <InsetBlock>
+          <Caption>
+            You will see the host's game streamed to your browser. Your keyboard
+            and gamepad inputs will control Player 2.
+          </Caption>
+        </InsetBlock>
+      </PanelShell>
     )
   }
 
   return (
-    <div className="w-full p-4">
-      <div className="mb-3 flex items-center justify-between">
+    <PanelShell>
+      <div className="mb-3 flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <div className="font-retro text-[7px] text-gray-400">ROOM</div>
-          <div className="font-retro text-[9px] text-green-400 tracking-widest">{roomCode}</div>
+          <SectionTitle>ROOM</SectionTitle>
+          <span className="font-lcd" style={{ color: '#1ba23e', letterSpacing: '0.25em', fontSize: 'clamp(14px, 1.4vw, 18px)' }}>
+            {roomCode}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {gamepadName && (
             <div
-              className="flex items-center gap-1 px-2 py-1 rounded bg-ps1-dark border border-ps1-gray"
+              className="inline-flex items-center gap-1.5"
               title={gamepadName}
+              style={{
+                background: '#b0b2b8',
+                borderTop: '2px solid #5a5c62',
+                borderLeft: '2px solid #5a5c62',
+                borderRight: '2px solid #e4e6ea',
+                borderBottom: '2px solid #e4e6ea',
+                padding: '4px 8px',
+              }}
             >
-              <span className="w-2 h-2 rounded-full bg-green-400" />
-              <span className="font-retro text-[7px] text-gray-200 tracking-wider">
+              <span className="w-2 h-2" style={{ background: '#1ba23e' }} />
+              <span className="font-ps font-black uppercase tracking-[0.18em]" style={{ color: HEADER_TEXT, fontSize: '9px' }}>
                 GAMEPAD
               </span>
             </div>
@@ -489,33 +599,29 @@ function GuestView({ room }) {
         </div>
       </div>
 
-      {error && (
-        <div className="mb-3 p-2 bg-red-900/50 border border-red-500 rounded text-red-300 text-[7px] font-retro">
-          {error}
-        </div>
-      )}
+      <ErrorBar message={error} />
 
       <div
         ref={stageRef}
-        className={`relative bg-black border-2 border-ps1-gray mx-auto ${
-          isFullscreen ? 'w-screen h-screen' : 'w-full'
-        }`}
+        className={`relative mx-auto ${isFullscreen ? 'w-screen h-screen' : 'w-full'}`}
         style={
           isFullscreen
-            ? {}
+            ? { background: '#000' }
             : {
                 aspectRatio: '4/3',
-                // Scale the stage so it fills the available viewport while
-                // preserving 4:3. The 160px budget leaves room for the panel
-                // header, hint row and the browser chrome.
                 maxWidth: 'min(100%, calc((100vh - 160px) * 4 / 3))',
+                background: '#000',
+                borderTop: '2px solid #000',
+                borderLeft: '2px solid #000',
+                borderRight: '2px solid #3a3c42',
+                borderBottom: '2px solid #3a3c42',
               }
         }
       >
         <div
           ref={inputFocusRef}
           tabIndex={0}
-          className="absolute inset-0 outline-none focus:ring-2 focus:ring-green-500 focus:ring-inset"
+          className="absolute inset-0 outline-none focus:ring-2 focus:ring-[#1ba23e] focus:ring-inset"
         >
           <video
             ref={videoRef}
@@ -523,11 +629,6 @@ function GuestView({ room }) {
             playsInline
             muted={isMuted}
             className="w-full h-full object-contain bg-black"
-            // PSX native resolution is tiny (~320x240); pixelated keeps the
-            // upscale crisp instead of applying a blurry bilinear filter.
-            // The filter compensates for the RGB full-range -> YUV limited-
-            // range conversion that WebRTC encoders apply, which tends to
-            // wash out contrast and saturation on the receiver.
             style={{
               imageRendering: 'pixelated',
               filter: 'contrast(1.08) saturate(1.18)',
@@ -538,10 +639,10 @@ function GuestView({ room }) {
         {!remoteStream && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/80 pointer-events-none">
             <div className="text-center">
-              <div className="font-retro text-[10px] text-yellow-400 mb-2">
+              <div className="font-ps font-black tracking-[0.28em] uppercase mb-2" style={{ color: '#d8a833', fontSize: '12px' }}>
                 {status === 'connected' ? 'WAITING FOR HOST STREAM' : 'CONNECTING TO HOST'}
               </div>
-              <div className="font-retro text-[7px] text-gray-400">
+              <div className="font-ps tracking-[0.18em] uppercase" style={{ color: '#b0b2b8', fontSize: '9px' }}>
                 The host must have a game running.
               </div>
             </div>
@@ -550,49 +651,23 @@ function GuestView({ room }) {
 
         {remoteStream && (
           <div className="absolute bottom-2 right-2 flex items-center gap-2 z-10">
-            <button
-              onClick={() => setShowControls(true)}
-              className="px-3 py-1 bg-gray-900/80 hover:bg-gray-800 text-white font-retro text-[8px] rounded border border-gray-600"
-              title="Configure controls"
-            >
-              CONTROLS
-            </button>
-            <button
-              onClick={toggleMute}
-              className="px-3 py-1 bg-gray-900/80 hover:bg-gray-800 text-white font-retro text-[8px] rounded border border-gray-600"
-            >
-              {isMuted ? 'UNMUTE' : 'MUTE'}
-            </button>
-            <button
-              onClick={toggleFullscreen}
-              className="px-3 py-1 bg-gray-900/80 hover:bg-gray-800 text-white font-retro text-[8px] rounded border border-gray-600"
-              title="Toggle fullscreen"
-            >
+            <Pill color="gray" onClick={() => setShowControls(true)} title="Configure controls">CONTROLS</Pill>
+            <Pill color="gray" onClick={toggleMute}>{isMuted ? 'UNMUTE' : 'MUTE'}</Pill>
+            <Pill color="blue" onClick={toggleFullscreen} title="Toggle fullscreen">
               {isFullscreen ? 'EXIT FULL' : 'FULLSCREEN'}
-            </button>
+            </Pill>
           </div>
         )}
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <div className="font-retro text-[7px] text-gray-400 leading-relaxed max-w-[70%]">
-          Plug in a USB/Bluetooth gamepad and press any button to activate it, or click
-          the video area to use the keyboard. Press <span className="text-gray-200">CONTROLS</span>
-          {' '}below the video to remap any button.
-        </div>
+      <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
+        <Caption>
+          Plug in a gamepad or click the video area to capture the keyboard.
+          Press CONTROLS to remap any button.
+        </Caption>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowControls(true)}
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white font-retro text-[8px] rounded"
-          >
-            CONTROLS
-          </button>
-          <button
-            onClick={leaveRoom}
-            className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white font-retro text-[8px] rounded"
-          >
-            LEAVE
-          </button>
+          <Pill color="blue" onClick={() => setShowControls(true)}>CONTROLS</Pill>
+          <Pill color="red" onClick={leaveRoom}>LEAVE</Pill>
         </div>
       </div>
 
@@ -603,59 +678,53 @@ function GuestView({ room }) {
           onClose={() => setShowControls(false)}
         />
       )}
-    </div>
+    </PanelShell>
   )
 }
+
+/* ---------------------------- Entry view --------------------------- */
 
 export default function GameRoomPanel({ room, canHost, onHidePanel }) {
   const { role, createRoom, status, error } = room
 
-  // Entry screen: pick Host or Guest.
   if (role === 'idle') {
     return (
-      <div className="w-full p-4">
-        <div className="mb-6 flex items-center justify-between">
+      <PanelShell>
+        <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h2 className="font-retro text-xs text-ps1-text mb-1">GAME ROOM</h2>
-            <p className="font-retro text-[7px] text-gray-400">
-              Stream your game to a friend or join theirs.
-            </p>
+            <SectionTitle>GAME ROOM</SectionTitle>
+            <Caption>Stream your game or join a friend's</Caption>
           </div>
           {onHidePanel && (
-            <button
-              onClick={onHidePanel}
-              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white font-retro text-[8px] rounded"
-            >
-              CLOSE
-            </button>
+            <Pill color="gray" onClick={onHidePanel}>CLOSE</Pill>
           )}
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-300 text-[8px] font-retro">
-            {error}
-          </div>
-        )}
+        <ErrorBar message={error} />
 
-        <div className="space-y-3">
-          <button
+        <div className="flex flex-col items-center gap-3 mb-4">
+          <TanButton
+            strong
             onClick={createRoom}
             disabled={!canHost || status === 'connecting'}
-            className="w-full py-3 px-4 bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-retro text-[9px] rounded"
           >
             HOST A GAME
-          </button>
+          </TanButton>
           {!canHost && (
-            <div className="font-retro text-[7px] text-yellow-400 -mt-2 text-center">
-              Start a game first to host a room.
-            </div>
+            <Caption color="#8b5a14">Start a game first to host a room.</Caption>
           )}
-
-          <div className="pt-2 border-t border-ps1-gray" />
-
-          <GuestView room={room} />
         </div>
-      </div>
+
+        <div
+          className="my-4"
+          style={{
+            height: 2,
+            background: '#8b8d94',
+          }}
+        />
+
+        <GuestView room={room} />
+      </PanelShell>
     )
   }
 

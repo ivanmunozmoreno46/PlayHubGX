@@ -4,23 +4,24 @@ import { useGamepad } from '../hooks/useGamepad'
 import { useGameRoom } from '../hooks/useGameRoom'
 import GamepadIndicator from './GamepadIndicator'
 import GameRoomPanel from './GameRoomPanel'
+import BiosDesktop from './BiosDesktop'
 
 /**
  * PS1 Memory Card Manager Style - Light Gray Grid Theme
  */
 
-// Grid cell component - Medium gray PS1 style
+// Grid cell - dark navy BIOS style
 function GridCell({ children, className }) {
   return (
     <div
       className={`
-        aspect-square border border-gray-500 
+        aspect-square border border-ps1-bios-border
         flex items-center justify-center
         ${className || ''}
       `}
       style={{
-        backgroundColor: '#505050',
-        boxShadow: 'inset 1px 1px 0 #606060, inset -1px -1px 0 #404040',
+        backgroundColor: '#10133a',
+        boxShadow: 'inset 1px 1px 0 rgba(0,204,255,0.08), inset -1px -1px 0 rgba(0,0,0,0.35)',
       }}
     >
       {children}
@@ -28,57 +29,58 @@ function GridCell({ children, className }) {
   )
 }
 
-// PS1-style START button
+// PS1-style primary button (cyan-bordered BIOS look)
 function StartButton({ children, onClick, className }) {
   return (
     <button
       onClick={onClick}
       className={`
-        px-6 py-2 font-retro text-[10px] tracking-wider
-        bg-green-600 hover:bg-green-500 text-white
+        px-6 py-2 font-ps font-semibold text-[11px] tracking-[0.25em]
+        bg-ps1-cyan-deep/70 hover:bg-ps1-cyan-deep text-white
+        border border-ps1-cyan
+        shadow-ps1-cyan-glow
         active:translate-y-0.5 transition-all
         ${className || ''}
       `}
-      style={{
-        boxShadow: 'inset 1px 1px 0 rgba(255,255,255,0.3), inset -1px -1px 0 rgba(0,0,0,0.3)',
-      }}
     >
       {children}
     </button>
   )
 }
 
-// Secondary action button
+// Secondary action button (subdued, outlined)
 function ActionButton({ children, onClick, className }) {
   return (
     <button
       onClick={onClick}
       className={`
-        px-4 py-1.5 font-retro text-[8px] tracking-wider
-        bg-gray-500 hover:bg-gray-400 text-gray-100
+        px-4 py-1.5 font-ps font-medium text-[10px] tracking-[0.22em]
+        bg-ps1-bios-panel hover:bg-ps1-bios-panel/80
+        border border-ps1-bios-border hover:border-ps1-cyan-soft
+        text-ps1-cyan-soft
         active:translate-y-0.5 transition-all
         ${className || ''}
       `}
-      style={{
-        boxShadow: 'inset 1px 1px 0 rgba(255,255,255,0.3), inset -1px -1px 0 rgba(0,0,0,0.2)',
-      }}
     >
       {children}
     </button>
   )
 }
 
-// Slot header with colored number
-function SlotHeader({ slot, color }) {
+// Slot header with colored number (BIOS card look)
+function SlotHeader({ slot, color, label }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
       <div className="flex-1">
-        <div className="font-retro text-[7px] text-gray-600">MEMORY CARD</div>
-        <div className="font-retro text-[8px] text-gray-500">SLOT</div>
+        <div className="font-retro text-[7px] text-ps1-cyan-soft/70 tracking-widest">MEMORY CARD</div>
+        <div className="font-ps text-[11px] text-ps1-cyan-soft tracking-[0.3em]">{label || 'SLOT'}</div>
       </div>
       <div
-        className="w-6 h-6 flex items-center justify-center font-retro text-[14px] text-black font-bold"
-        style={{ backgroundColor: color }}
+        className="w-6 h-6 flex items-center justify-center font-retro text-[12px] text-black font-bold rounded-sm"
+        style={{
+          backgroundColor: color,
+          boxShadow: `0 0 8px ${color}66, inset 0 1px 0 rgba(255,255,255,0.3)`,
+        }}
       >
         {slot}
       </div>
@@ -118,34 +120,6 @@ function EmulatorScreen() {
 
   const hideGameRoomPanel = useCallback(() => setShowGameRoom(false), [])
 
-  // Detect multiple connected gamepads
-  const [connectedPads, setConnectedPads] = useState([])
-
-  useEffect(() => {
-    const updateGamepads = () => {
-      const pads = navigator.getGamepads()
-      const connected = []
-      for (let i = 0; i < 4; i++) {
-        if (pads[i]) {
-          connected.push({ index: i, id: pads[i].id })
-        }
-      }
-      setConnectedPads(connected)
-    }
-
-    updateGamepads()
-    const interval = setInterval(updateGamepads, 1000)
-
-    window.addEventListener('gamepadconnected', updateGamepads)
-    window.addEventListener('gamepaddisconnected', updateGamepads)
-
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener('gamepadconnected', updateGamepads)
-      window.removeEventListener('gamepaddisconnected', updateGamepads)
-    }
-  }, [])
-
   const handleBiosChange = useCallback((e) => {
     const file = e.target.files[0]
     if (file) {
@@ -160,11 +134,9 @@ function EmulatorScreen() {
   const handleRomChange = useCallback((e) => {
     const files = Array.from(e.target.files)
     if (files.length > 0) {
-      const validExtensions = ['.bin', '.cue', '.iso', '.img', '.chd', '.pbp']
       for (const file of files) {
-        const isValid = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
-        if (!isValid) {
-          alert(`Invalid file: ${file.name}`)
+        if (!file.name.toLowerCase().endsWith('.chd')) {
+          alert(`Invalid file: ${file.name}. Only .chd ROMs are supported.`)
           return
         }
       }
@@ -204,45 +176,39 @@ function EmulatorScreen() {
         />
       </div>
     )}
-    <div className="w-full h-full flex flex-col bg-gray-600">
-      {/* Input Status Bar */}
-      <div className="flex items-center justify-between px-2 py-1 bg-gray-700 border-b border-gray-600">
-        <div className="flex items-center gap-2">
-          <GamepadIndicator
-            isConnected={gamepadState.isConnected}
-            gamepadId={gamepadState.gamepadId}
-            inputSource={gamepadState.isConnected ? 'gamepad' : 'keyboard'}
-          />
-          <span className={`font-retro text-[7px] ${gamepadState.isConnected ? 'text-green-700' : 'text-gray-500'}`}>
-            {gamepadState.isConnected ? 'PAD' : 'NO PAD'}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
+    <div className="w-full h-full flex flex-col">
+      {/* Slim floating status overlay (pad + room + exit) only while the game is running. */}
+      {emulatorState.isRunning && (
+        <div className="absolute top-2 right-2 z-40 flex items-center gap-2">
+          {gamepadState.isConnected && (
+            <div className="flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-sm">
+              <GamepadIndicator
+                isConnected
+                gamepadId={gamepadState.gamepadId}
+                inputSource="gamepad"
+              />
+              <span className="font-retro text-[7px] tracking-widest text-ps1-led-green">PAD</span>
+            </div>
+          )}
           <button
             onClick={() => {
-              // Guests cannot hide their own panel (the video is the whole UI).
               if (isGuestStreaming) return
               setShowGameRoom((v) => !v)
             }}
             disabled={isGuestStreaming}
             className={`
-              px-3 py-1 font-retro text-[8px] rounded transition-all
+              px-3 py-1 font-retro text-[8px] tracking-widest rounded-sm transition-all border
               ${gameRoomActive
-                ? 'bg-green-600 hover:bg-green-500 text-white'
+                ? 'bg-ps1-led-green text-black border-ps1-led-green shadow-[0_0_10px_rgba(68,204,102,0.45)]'
                 : gameRoomVisible
-                  ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                  : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                  ? 'bg-[#1a4ed7] text-white border-[#3373ff]'
+                  : 'bg-black/50 text-white border-white/30 hover:border-white'
               }
             `}
-            title={
-              gameRoomActive && !gameRoomVisible
-                ? 'Room is still running. Click to show panel.'
-                : 'Stream this game to a friend (or join theirs)'
-            }
           >
             {gameRoomActive
               ? (gameRoom.isHost ? 'HOSTING' : 'IN ROOM')
-              : gameRoomVisible ? 'ROOM: ON' : 'ROOM: OFF'}
+              : gameRoomVisible ? 'ROOM ON' : 'ROOM'}
             {gameRoom.isHost && gameRoom.guestCount > 0 && (
               <span className="ml-1 text-[7px]">·{gameRoom.guestCount}</span>
             )}
@@ -250,17 +216,34 @@ function EmulatorScreen() {
               <span className="ml-1 text-[7px]">{gameRoom.latency}ms</span>
             )}
           </button>
+          <button
+            onClick={resetEmulator}
+            className="px-3 py-1 font-retro text-[8px] tracking-widest rounded-sm border bg-[#d71a1a] hover:bg-[#ff3535] text-white border-white/50"
+            title="Stop the game and return to the BIOS desktop"
+          >
+            EXIT
+          </button>
         </div>
-      </div>
+      )}
 
-      {/* Main Content Area - PS1 Memory Card Manager Style */}
-      <div className="relative w-full flex-1" style={{ aspectRatio: '4/3' }}>
+      {/* Main Content Area */}
+      <div className="relative w-full flex-1 min-h-0 overflow-hidden">
 
         {/* Game Room (Host-Client streaming) - host panel stays inside the console screen */}
         {gameRoomVisible && !isGuestStreaming && (
-          <div className="absolute inset-0 z-30 bg-gray-900/95 backdrop-blur-sm overflow-y-auto">
+          <div className="absolute inset-0 z-30 overflow-y-auto animate-fade-in" style={{ backgroundColor: 'rgba(126,128,136,0.95)' }}>
             <div className="min-h-full flex items-center justify-center p-4">
-              <div className="w-full max-w-xl bg-gray-800 rounded-lg border-2 border-ps1-gray shadow-2xl">
+              <div
+                className="w-full max-w-xl animate-slide-in-up"
+                style={{
+                  background: '#c4c6cc',
+                  borderTop: '2px solid #e4e6ea',
+                  borderLeft: '2px solid #e4e6ea',
+                  borderRight: '2px solid #5a5c62',
+                  borderBottom: '2px solid #5a5c62',
+                  imageRendering: 'pixelated',
+                }}
+              >
                 <GameRoomPanel
                   room={gameRoom}
                   canHost={emulatorState.isRunning}
@@ -271,151 +254,100 @@ function EmulatorScreen() {
           </div>
         )}
 
+        {/* EmulatorJS canvas host — kept empty in React; EmulatorJS owns innerHTML */}
         <div
           ref={containerRef}
-          className="absolute inset-0 overflow-hidden flex flex-col"
-          style={{ backgroundColor: '#585858' }}
-        >
-          {emulatorState.isLoading ? (
-            /* Loading Screen - Medium Gray Grid */
-            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-600">
-              <div className="grid grid-cols-12 grid-rows-8 w-full h-full gap-0 p-2">
-                {Array.from({ length: 96 }).map((_, i) => (
-                  <GridCell key={i} className="border-gray-500" />
-                ))}
-              </div>
-              {/* Overlay loading info */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800/60">
-                <div className="font-retro text-[10px] text-yellow-400 mb-4">
-                  {emulatorState.loadingMessage || 'LOADING'}
-                </div>
-                <div className="w-48 h-3 bg-gray-600 border border-gray-500">
-                  <div
-                    className="h-full bg-green-500 transition-all duration-300"
-                    style={{ width: `${emulatorState.progress}%` }}
-                  />
-                </div>
-                <div className="font-retro text-[8px] text-gray-300 mt-2">
-                  {emulatorState.progress}%
-                </div>
-                {/* Debug info */}
-                <div className="font-retro text-[6px] text-gray-500 mt-4 px-8 text-center max-w-xs">
-                  BIOS: {biosFile?.name}<br/>
-                  ROM: {romFiles.map(f => f.name).join(', ')}
-                </div>
-              </div>
-            </div>
-          ) : emulatorState.isRunning ? (
-            /* Emulator Running */
-            <div className="w-full h-full relative bg-black">
-              {emulatorState.needsMenuInteraction && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
-                  <div className="text-center">
-                    <div className="font-retro text-yellow-400 text-[10px] mb-4">
-                      SELECT GAME
-                    </div>
-                    <div className="font-retro text-[8px] text-gray-400">
-                      Use ↑↓←→ to navigate
-                    </div>
-                    <div className="font-retro text-[8px] text-gray-400 mt-1">
-                      Enter/Z to select
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : emulatorState.error ? (
-            /* Error Screen */
-            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-400">
-              <div className="font-retro text-red-600 text-[10px] mb-4">ERROR</div>
-              <div className="font-retro text-[7px] text-gray-700 px-4 text-center max-w-xs mb-4">
-                {emulatorState.error}
-              </div>
-              <ActionButton onClick={resetEmulator}>RESET</ActionButton>
-            </div>
-          ) : (
-            /* Unified loader screen: wrench + LOAD BIOS on the left,
-               disc + LOAD GAME on the right, START/RESET in the middle. */
-            <div className="w-full h-full flex flex-col p-3" style={{ backgroundColor: '#606060' }}>
-              {/* Title bar */}
-              <div className="text-center mb-3">
-                <div className="font-retro text-[10px] text-gray-300">
-                  PlayHubGX
-                </div>
-              </div>
+          className="absolute inset-0 overflow-hidden"
+          style={{ backgroundColor: '#05061a' }}
+        />
 
-              {/* Grid area */}
-              <div className="flex-1 grid grid-cols-12 grid-rows-8 gap-0 mb-3">
-                {/* Left column - Wrench (BIOS slot) */}
-                <div className="col-span-4 row-span-8 flex flex-col">
-                  <div className="bg-gray-700 px-2 py-1 border border-gray-600 mb-1">
-                    <SlotHeader slot="1" color="#22c55e" />
+        {/* UI overlays rendered as siblings so React never reconciles into
+            the div EmulatorJS mutates imperatively. */}
+        {!emulatorState.isRunning && (
+          <div
+            className="absolute inset-0 overflow-hidden flex flex-col"
+            style={{ backgroundColor: '#05061a' }}
+          >
+            {emulatorState.isLoading ? (
+              /* Loading Screen - BIOS navy with spinning diamond */
+              <div className="w-full h-full flex flex-col items-center justify-center bg-ps1-bios-bg-deep relative animate-fade-in">
+                <div
+                  className="absolute inset-0 opacity-25"
+                  style={{
+                    backgroundImage:
+                      'linear-gradient(rgba(0,204,255,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(0,204,255,0.12) 1px, transparent 1px)',
+                    backgroundSize: '48px 48px',
+                  }}
+                />
+                <div className="relative z-10 flex flex-col items-center gap-4">
+                  <div className="ps1-loader" />
+                  <div className="font-ps font-semibold text-[13px] text-ps1-yellow tracking-[0.25em] glow-yellow">
+                    {emulatorState.loadingMessage || 'LOADING'}
                   </div>
-                  <div className="flex-1 flex items-center justify-center bg-gray-600 border border-gray-500">
-                    <span className="text-3xl">🔧</span>
-                  </div>
-                  <div className="mt-2 flex flex-col items-center gap-1">
-                    <StartButton onClick={triggerBiosInput}>
-                      {biosFile ? 'CHANGE BIOS' : 'LOAD BIOS'}
-                    </StartButton>
+                  <div className="w-56 h-2 bg-ps1-bios-panel border border-ps1-bios-border rounded-sm overflow-hidden">
                     <div
-                      className="font-retro text-[7px] text-gray-300 text-center truncate w-full px-1"
-                      title={biosFile?.name || ''}
-                    >
-                      {biosFile?.name || '—'}
-                    </div>
+                      className="h-full bg-ps1-cyan transition-all duration-300 shadow-ps1-cyan-glow"
+                      style={{ width: `${emulatorState.progress}%` }}
+                    />
                   </div>
-                </div>
-
-                {/* Center column - START / RESET */}
-                <div className="col-span-4 row-span-8 flex flex-col items-center justify-center gap-3">
-                  <StartButton
-                    onClick={startEmulator}
-                    className={biosFile && romFiles.length > 0 ? '' : 'opacity-40 pointer-events-none'}
-                  >
-                    START GAME
-                  </StartButton>
-                  {(biosFile || romFiles.length > 0) && (
-                    <ActionButton onClick={resetEmulator}>
-                      RESET
-                    </ActionButton>
-                  )}
-                </div>
-
-                {/* Right column - Disc (game slot) */}
-                <div className="col-span-4 row-span-8 flex flex-col">
-                  <div className="bg-gray-700 px-2 py-1 border border-gray-600 mb-1">
-                    <SlotHeader slot="2" color="#eab308" />
+                  <div className="font-lcd text-[18px] leading-none text-ps1-cyan-soft">
+                    {emulatorState.progress}%
                   </div>
-                  <div className="flex-1 flex items-center justify-center bg-gray-600 border border-gray-500">
-                    <span className="text-3xl">💿</span>
-                  </div>
-                  <div className="mt-2 flex flex-col items-center gap-1">
-                    <StartButton
-                      onClick={triggerRomInput}
-                      className={biosFile ? '' : 'opacity-40 pointer-events-none'}
-                    >
-                      {romFiles.length > 0 ? 'CHANGE GAME' : 'LOAD GAME'}
-                    </StartButton>
-                    <div
-                      className="font-retro text-[7px] text-gray-300 text-center truncate w-full px-1"
-                      title={romFiles[0]?.name || ''}
-                    >
-                      {romFiles[0]?.name || '—'}
-                    </div>
+                  <div className="font-retro text-[6px] text-ps1-cyan-soft/70 mt-2 px-8 text-center max-w-xs tracking-widest">
+                    BIOS: {biosFile?.name}<br/>
+                    ROM: {romFiles.map(f => f.name).join(', ')}
                   </div>
                 </div>
               </div>
-
-              {/* Hints */}
-              <div className="text-center mt-2">
-                <div className="font-retro text-[7px] text-gray-500">
-                  BIOS: scph5501.bin / scph7001.bin / scph1001.bin · GAME: .bin, .cue, .iso, .img, .chd, .pbp
+            ) : emulatorState.error ? (
+              /* Error Screen */
+              <div className="w-full h-full flex flex-col items-center justify-center bg-ps1-bios-bg-deep animate-fade-in">
+                <div className="font-ps font-semibold text-ps1-led-red text-[14px] tracking-[0.3em] mb-4">ERROR</div>
+                <div className="font-retro text-[7px] text-ps1-cyan-soft px-4 text-center max-w-xs mb-4 leading-relaxed">
+                  {emulatorState.error}
                 </div>
+                <ActionButton onClick={resetEmulator}>RESET</ActionButton>
+              </div>
+            ) : (
+              /* PSX BIOS Memory Card Manager desktop */
+              <BiosDesktop
+                biosFile={biosFile}
+                romFiles={romFiles}
+                onLoadBios={triggerBiosInput}
+                onLoadGame={triggerRomInput}
+                onStart={startEmulator}
+                onReset={resetEmulator}
+                onToggleRoom={() => {
+                  if (isGuestStreaming) return
+                  setShowGameRoom((v) => !v)
+                }}
+                gameRoomVisible={gameRoomVisible}
+                gameRoomActive={gameRoomActive}
+                roomLabel={
+                  gameRoomActive
+                    ? (gameRoom.isHost ? 'HOSTING' : 'IN ROOM')
+                    : gameRoomVisible ? 'ROOM ON' : 'ROOM'
+                }
+              />
+            )}
+          </div>
+        )}
+
+        {emulatorState.isRunning && emulatorState.needsMenuInteraction && (
+          <div className="absolute inset-0 flex items-center justify-center bg-ps1-bios-bg-deep/80 z-10 animate-fade-in">
+            <div className="text-center">
+              <div className="font-ps font-semibold text-ps1-yellow text-[14px] tracking-[0.3em] mb-4 glow-yellow">
+                SELECT GAME
+              </div>
+              <div className="font-retro text-[8px] text-ps1-cyan-soft tracking-widest">
+                Use ↑↓←→ to navigate
+              </div>
+              <div className="font-retro text-[8px] text-ps1-cyan-soft tracking-widest mt-1">
+                Enter/Z to select
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Hidden File Inputs */}
@@ -429,120 +361,11 @@ function EmulatorScreen() {
       <input
         ref={romInputRef}
         type="file"
-        accept=".bin,.cue,.iso,.img,.chd,.pbp"
+        accept=".chd"
         multiple
         onChange={handleRomChange}
         className="hidden"
       />
-
-      {/* Controller Ports - Below the screen */}
-      <div className="bg-gray-700 px-3 py-2 border-t border-gray-600">
-        <div className="flex items-center justify-center gap-6">
-          {/* Port 1 */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2">
-              {/* Port socket */}
-              <div className={`w-16 h-8 rounded-sm border-2 flex items-center justify-center transition-colors ${
-                connectedPads.length > 0 
-                  ? 'bg-green-900/30 border-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' 
-                  : 'bg-gray-800 border-gray-600'
-              }`}>
-                {/* Port pins */}
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className={`w-1 h-1 rounded-full ${
-                      connectedPads.length > 0 ? 'bg-green-500' : 'bg-gray-600'
-                    }`}></div>
-                  ))}
-                </div>
-              </div>
-              {/* Connection indicator */}
-              <div className={`w-2 h-2 rounded-full ${
-                connectedPads.length > 0 ? 'bg-green-500 led-blink' : 'bg-gray-600'
-              }`}></div>
-            </div>
-            <span className="font-retro text-[7px] text-gray-400">PORT 1</span>
-            {connectedPads.length > 0 && (
-              <span className="font-retro text-[6px] text-green-400 truncate max-w-[100px]">
-                {connectedPads[0].id?.substring(0, 15)}
-              </span>
-            )}
-          </div>
-
-          {/* Divider */}
-          <div className="h-8 w-px bg-gray-600"></div>
-
-          {/* Port 2 */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2">
-              {/* Port socket */}
-              <div className={`w-16 h-8 rounded-sm border-2 flex items-center justify-center transition-colors ${
-                connectedPads.length > 1 
-                  ? 'bg-green-900/30 border-green-500 shadow-[0_0_8px_rgba(34,197,94,0.3)]' 
-                  : 'bg-gray-800 border-gray-600'
-              }`}>
-                {/* Port pins */}
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className={`w-1 h-1 rounded-full ${
-                      connectedPads.length > 1 ? 'bg-green-500' : 'bg-gray-600'
-                    }`}></div>
-                  ))}
-                </div>
-              </div>
-              {/* Connection indicator */}
-              <div className={`w-2 h-2 rounded-full ${
-                connectedPads.length > 1 ? 'bg-green-500 led-blink' : 'bg-gray-600'
-              }`}></div>
-            </div>
-            <span className="font-retro text-[7px] text-gray-400">PORT 2</span>
-            {connectedPads.length > 1 && (
-              <span className="font-retro text-[6px] text-green-400 truncate max-w-[100px]">
-                {connectedPads[1].id?.substring(0, 15)}
-              </span>
-            )}
-          </div>
-
-          {/* Memory Card Divider */}
-          <div className="h-8 w-px bg-gray-600"></div>
-
-          {/* Memory Card Slot 1 */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2">
-              {/* Memory card slot */}
-              <div className="w-12 h-8 rounded-sm border-2 bg-gray-800 border-gray-600 flex items-center justify-center">
-                {/* Memory card icon */}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-gray-600">
-                  <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                  <rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                  <rect x="13" y="7" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                  <rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                  <rect x="13" y="13" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                </svg>
-              </div>
-            </div>
-            <span className="font-retro text-[7px] text-gray-400">MEM 1</span>
-          </div>
-
-          {/* Memory Card Slot 2 */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2">
-              {/* Memory card slot */}
-              <div className="w-12 h-8 rounded-sm border-2 bg-gray-800 border-gray-600 flex items-center justify-center">
-                {/* Memory card icon */}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-gray-600">
-                  <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                  <rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                  <rect x="13" y="7" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                  <rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                  <rect x="13" y="13" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                </svg>
-              </div>
-            </div>
-            <span className="font-retro text-[7px] text-gray-400">MEM 2</span>
-          </div>
-        </div>
-      </div>
     </div>
     </>
   )
