@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import EmulatorScreen from './components/EmulatorScreen'
-import GamepadIndicator from './components/GamepadIndicator'
 import CRTOverlay from './components/CRTOverlay'
-import { useGamepad } from './hooks/useGamepad'
 
 /**
  * PS1 console shell.
@@ -17,8 +15,6 @@ import { useGamepad } from './hooks/useGamepad'
 function App() {
   const [isPoweredOn, setIsPoweredOn] = useState(false)
 
-  const { gamepadState } = useGamepad()
-
   const handlePowerToggle = () => {
     setIsPoweredOn(prev => !prev)
   }
@@ -30,45 +26,37 @@ function App() {
       <div className="w-full max-w-5xl relative animate-fade-in">
         <div className="ps1-shell ps1-plastic-texture rounded-md overflow-hidden">
 
-          {/* ===== Top face ===== */}
-          <div className="relative px-8 pt-6 pb-5 border-b border-ps1-plastic-seam/70 bg-ps1-plastic">
-            <div className="flex items-start justify-between gap-6">
+          {/* ===== Top face (compact) ===== */}
+          <div className="relative px-6 py-3 border-b border-ps1-plastic-seam/70 bg-ps1-plastic">
+            <div className="flex items-center justify-between gap-6">
 
-              {/* Left: PS logo + wordmark + model label */}
-              <div className="flex flex-col gap-2 pt-2 select-none">
-                <div className="flex items-end gap-1 leading-none">
-                  <span className="ps1-logo-p font-ps font-black text-[52px] leading-[0.8]">P</span>
-                  <span className="ps1-logo-s font-ps font-black text-[52px] leading-[0.8] -ml-3">S</span>
+              {/* Left: PS logo + wordmark */}
+              <div className="flex items-center gap-3 select-none">
+                <div className="flex items-end leading-none">
+                  <span className="ps1-logo-p font-ps font-black text-[30px] leading-[0.8]">P</span>
+                  <span className="ps1-logo-s font-ps font-black text-[30px] leading-[0.8] -ml-2">S</span>
                 </div>
-                <div className="ps1-wordmark text-[22px] leading-none">PlayStation</div>
-                <div className="font-retro text-[8px] ps1-silkscreen tracking-[0.2em] mt-1">
-                  PlayHubGX · SCPH-HUB
+                <div className="flex flex-col">
+                  <div className="ps1-wordmark text-[14px] leading-none">PlayStation</div>
+                  <div className="font-retro text-[7px] ps1-silkscreen tracking-[0.2em] mt-1">
+                    PlayHubGX · SCPH-HUB
+                  </div>
                 </div>
               </div>
 
-              {/* Right: disc lid */}
-              <div className="relative w-[180px] shrink-0">
+              {/* Right: compact disc lid with OPEN button */}
+              <div className="relative w-[92px] shrink-0">
                 <div className="ps1-disc-lid w-full">
-                  {/* OPEN button pinned to the top-right of the lid */}
                   <button
                     type="button"
                     onClick={() => { /* cosmetic */ }}
-                    className="ps1-open-button absolute top-3 right-3 px-2 py-[3px] rounded-[2px] font-retro text-[7px] tracking-[0.2em] active:translate-y-[1px]"
+                    className="ps1-open-button absolute top-1 right-1 px-1.5 py-[2px] rounded-[2px] font-retro text-[6px] tracking-[0.2em] active:translate-y-[1px]"
                     aria-label="OPEN disc lid"
                   >
                     OPEN
                   </button>
                 </div>
               </div>
-            </div>
-
-            {/* Gamepad indicator absolute top-right so it doesn't compete with the lid */}
-            <div className="absolute top-3 left-3">
-              <GamepadIndicator
-                isConnected={gamepadState.isConnected}
-                gamepadId={gamepadState.gamepadId}
-                inputSource={gamepadState.isConnected ? 'gamepad' : 'keyboard'}
-              />
             </div>
           </div>
 
