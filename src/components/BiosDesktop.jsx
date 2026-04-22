@@ -213,7 +213,14 @@ export default function BiosDesktop({
         {/* Two side blocks: wrench+LOAD BIOS | disc+LOAD GAME */}
         <div className="flex-1 min-h-0 flex items-center justify-center gap-[clamp(14px,3vw,48px)]">
           <IconBlock
-            icon={<Model3D url="/models/wrench.glb" speed={0.5} tilt={[-0.45, 0, 0.6]} />}
+            icon={
+              <Model3D
+                url="/models/wrench.glb"
+                speed={0.5}
+                tilt={[-0.45, 0, 0.6]}
+                paint={{ color: '#c8ccd4', metalness: 1, roughness: 0.28 }}
+              />
+            }
             accent="green"
             loaded={biosLoaded}
             fileName={biosFile?.name}

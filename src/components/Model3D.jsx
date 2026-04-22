@@ -1,6 +1,7 @@
-import { Suspense, useRef } from 'react'
+import { Suspense, useMemo, useRef } from 'react'
+import * as THREE from 'three'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useGLTF, Center, Bounds } from '@react-three/drei'
+import { useGLTF, Center, Bounds, Environment } from '@react-three/drei'
 
 /**
  * <Model3D url="/models/wrench.glb" />
@@ -11,9 +12,29 @@ import { useGLTF, Center, Bounds } from '@react-three/drei'
  * Manager flat-shaded look.
  */
 
-function SpinningModel({ url, speed = 0.6, tilt = [0, 0, 0] }) {
+function SpinningModel({ url, speed = 0.6, tilt = [0, 0, 0], paint }) {
   const group = useRef(null)
   const { scene } = useGLTF(url)
+
+  // Clone the scene so per-instance material overrides don't mutate the
+  // cached GLB shared by other consumers.
+  const painted = useMemo(() => {
+    const clone = scene.clone(true)
+    if (!paint) return clone
+    const color = paint.color ? new THREE.Color(paint.color) : null
+    clone.traverse((obj) => {
+      if (!obj.isMesh || !obj.material) return
+      const mat = obj.material.clone()
+      if (color) mat.color = color
+      if (paint.metalness != null) mat.metalness = paint.metalness
+      if (paint.roughness != null) mat.roughness = paint.roughness
+      if (paint.emissive != null) mat.emissive = new THREE.Color(paint.emissive)
+      mat.needsUpdate = true
+      obj.material = mat
+    })
+    return clone
+  }, [scene, paint])
+
   useFrame((_, delta) => {
     if (group.current) group.current.rotation.y += delta * speed
   })
@@ -23,14 +44,14 @@ function SpinningModel({ url, speed = 0.6, tilt = [0, 0, 0] }) {
           the rotation still reads as pure Y-spin but from a 3/4 angle. */}
       <group ref={group}>
         <group rotation={tilt}>
-          <primitive object={scene} />
+          <primitive object={painted} />
         </group>
       </group>
     </group>
   )
 }
 
-export default function Model3D({ url, speed = 0.6, tilt = [0, 0, 0], cameraDistance = 3 }) {
+export default function Model3D({ url, speed = 0.6, tilt = [0, 0, 0], cameraDistance = 3, paint }) {
   return (
     <Canvas
       dpr={[1, 2]}
@@ -45,9 +66,12 @@ export default function Model3D({ url, speed = 0.6, tilt = [0, 0, 0], cameraDist
       <directionalLight position={[-4, -2, -3]} intensity={0.7} />
       <directionalLight position={[0, -4, 2]} intensity={0.4} />
       <Suspense fallback={null}>
+        {/* Studio HDR so metallic materials have something to reflect.
+            background={false} keeps the canvas transparent. */}
+        <Environment preset="studio" background={false} />
         <Bounds fit clip observe margin={1.15}>
           <Center>
-            <SpinningModel url={url} speed={speed} tilt={tilt} />
+            <SpinningModel url={url} speed={speed} tilt={tilt} paint={paint} />
           </Center>
         </Bounds>
       </Suspense>
