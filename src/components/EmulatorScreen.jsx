@@ -4,7 +4,6 @@ import { useGamepad } from '../hooks/useGamepad'
 import { useGameRoom } from '../hooks/useGameRoom'
 import GamepadIndicator from './GamepadIndicator'
 import GameRoomPanel from './GameRoomPanel'
-import { Wrench3D, Disc3D } from './Bios3DObjects'
 import BiosDesktop from './BiosDesktop'
 
 /**
@@ -121,34 +120,6 @@ function EmulatorScreen() {
 
   const hideGameRoomPanel = useCallback(() => setShowGameRoom(false), [])
 
-  // Detect multiple connected gamepads
-  const [connectedPads, setConnectedPads] = useState([])
-
-  useEffect(() => {
-    const updateGamepads = () => {
-      const pads = navigator.getGamepads()
-      const connected = []
-      for (let i = 0; i < 4; i++) {
-        if (pads[i]) {
-          connected.push({ index: i, id: pads[i].id })
-        }
-      }
-      setConnectedPads(connected)
-    }
-
-    updateGamepads()
-    const interval = setInterval(updateGamepads, 1000)
-
-    window.addEventListener('gamepadconnected', updateGamepads)
-    window.addEventListener('gamepaddisconnected', updateGamepads)
-
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener('gamepadconnected', updateGamepads)
-      window.removeEventListener('gamepaddisconnected', updateGamepads)
-    }
-  }, [])
-
   const handleBiosChange = useCallback((e) => {
     const file = e.target.files[0]
     if (file) {
@@ -207,23 +178,22 @@ function EmulatorScreen() {
         />
       </div>
     )}
-    <div className="w-full h-full flex flex-col bg-ps1-bios-bg-deep">
-      {/* Input Status Bar */}
-      <div className="flex items-center justify-between px-2 py-1 bg-ps1-bios-panel/80 border-b border-ps1-bios-border">
-        <div className="flex items-center gap-2">
-          <GamepadIndicator
-            isConnected={gamepadState.isConnected}
-            gamepadId={gamepadState.gamepadId}
-            inputSource={gamepadState.isConnected ? 'gamepad' : 'keyboard'}
-          />
-          <span className={`font-retro text-[7px] tracking-widest ${gamepadState.isConnected ? 'text-ps1-led-green' : 'text-ps1-cyan-soft/60'}`}>
-            {gamepadState.isConnected ? 'PAD' : 'NO PAD'}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
+    <div className="w-full h-full flex flex-col">
+      {/* Slim floating status overlay (pad + room) only while the game is running. */}
+      {emulatorState.isRunning && (
+        <div className="absolute top-2 right-2 z-40 flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-sm">
+            <GamepadIndicator
+              isConnected={gamepadState.isConnected}
+              gamepadId={gamepadState.gamepadId}
+              inputSource={gamepadState.isConnected ? 'gamepad' : 'keyboard'}
+            />
+            <span className={`font-retro text-[7px] tracking-widest ${gamepadState.isConnected ? 'text-ps1-led-green' : 'text-white/70'}`}>
+              {gamepadState.isConnected ? 'PAD' : 'NO PAD'}
+            </span>
+          </div>
           <button
             onClick={() => {
-              // Guests cannot hide their own panel (the video is the whole UI).
               if (isGuestStreaming) return
               setShowGameRoom((v) => !v)
             }}
@@ -233,19 +203,14 @@ function EmulatorScreen() {
               ${gameRoomActive
                 ? 'bg-ps1-led-green text-black border-ps1-led-green shadow-[0_0_10px_rgba(68,204,102,0.45)]'
                 : gameRoomVisible
-                  ? 'bg-ps1-cyan-deep text-white border-ps1-cyan shadow-ps1-cyan-glow'
-                  : 'bg-ps1-bios-panel text-ps1-cyan-soft border-ps1-bios-border hover:border-ps1-cyan-soft'
+                  ? 'bg-[#1a4ed7] text-white border-[#3373ff]'
+                  : 'bg-black/50 text-white border-white/30 hover:border-white'
               }
             `}
-            title={
-              gameRoomActive && !gameRoomVisible
-                ? 'Room is still running. Click to show panel.'
-                : 'Stream this game to a friend (or join theirs)'
-            }
           >
             {gameRoomActive
               ? (gameRoom.isHost ? 'HOSTING' : 'IN ROOM')
-              : gameRoomVisible ? 'ROOM: ON' : 'ROOM: OFF'}
+              : gameRoomVisible ? 'ROOM ON' : 'ROOM'}
             {gameRoom.isHost && gameRoom.guestCount > 0 && (
               <span className="ml-1 text-[7px]">·{gameRoom.guestCount}</span>
             )}
@@ -254,12 +219,9 @@ function EmulatorScreen() {
             )}
           </button>
         </div>
-      </div>
+      )}
 
-      {/* Main Content Area - PS1 Memory Card Manager Style
-       * Aspect ratio is enforced by the parent `ps1-well` container (App.jsx)
-       * so we just fill the available area and let children use min-h-0 to
-       * avoid forcing scroll on tiny viewports. */}
+      {/* Main Content Area */}
       <div className="relative w-full flex-1 min-h-0 overflow-hidden">
 
         {/* Game Room (Host-Client streaming) - host panel stays inside the console screen */}
@@ -382,103 +344,6 @@ function EmulatorScreen() {
         onChange={handleRomChange}
         className="hidden"
       />
-
-      {/* Controller Ports - Below the screen */}
-      <div className="bg-ps1-bios-panel/80 px-3 py-2 border-t border-ps1-bios-border">
-        <div className="flex items-center justify-center gap-6">
-          {/* Port 1 */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2">
-              <div className={`w-16 h-8 rounded-sm border-2 flex items-center justify-center transition-colors ${
-                connectedPads.length > 0
-                  ? 'bg-ps1-led-green/15 border-ps1-led-green shadow-[0_0_8px_rgba(68,204,102,0.35)]'
-                  : 'bg-ps1-bios-bg-deep border-ps1-bios-border'
-              }`}>
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className={`w-1 h-1 rounded-full ${
-                      connectedPads.length > 0 ? 'bg-ps1-led-green' : 'bg-ps1-bios-border'
-                    }`}></div>
-                  ))}
-                </div>
-              </div>
-              <div className={`w-2 h-2 rounded-full ${
-                connectedPads.length > 0 ? 'bg-ps1-led-green led-blink' : 'bg-ps1-bios-border'
-              }`}></div>
-            </div>
-            <span className="font-retro text-[7px] text-ps1-cyan-soft/80 tracking-widest">PORT 1</span>
-            {connectedPads.length > 0 && (
-              <span className="font-retro text-[6px] text-ps1-led-green truncate max-w-[100px]">
-                {connectedPads[0].id?.substring(0, 15)}
-              </span>
-            )}
-          </div>
-
-          <div className="h-8 w-px bg-ps1-bios-border"></div>
-
-          {/* Port 2 */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2">
-              <div className={`w-16 h-8 rounded-sm border-2 flex items-center justify-center transition-colors ${
-                connectedPads.length > 1
-                  ? 'bg-ps1-led-green/15 border-ps1-led-green shadow-[0_0_8px_rgba(68,204,102,0.35)]'
-                  : 'bg-ps1-bios-bg-deep border-ps1-bios-border'
-              }`}>
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className={`w-1 h-1 rounded-full ${
-                      connectedPads.length > 1 ? 'bg-ps1-led-green' : 'bg-ps1-bios-border'
-                    }`}></div>
-                  ))}
-                </div>
-              </div>
-              <div className={`w-2 h-2 rounded-full ${
-                connectedPads.length > 1 ? 'bg-ps1-led-green led-blink' : 'bg-ps1-bios-border'
-              }`}></div>
-            </div>
-            <span className="font-retro text-[7px] text-ps1-cyan-soft/80 tracking-widest">PORT 2</span>
-            {connectedPads.length > 1 && (
-              <span className="font-retro text-[6px] text-ps1-led-green truncate max-w-[100px]">
-                {connectedPads[1].id?.substring(0, 15)}
-              </span>
-            )}
-          </div>
-
-          <div className="h-8 w-px bg-ps1-bios-border"></div>
-
-          {/* Memory Card Slot 1 */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2">
-              <div className="w-12 h-8 rounded-sm border-2 bg-ps1-bios-bg-deep border-ps1-bios-border flex items-center justify-center">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-ps1-cyan-soft/50">
-                  <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                  <rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                  <rect x="13" y="7" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                  <rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                  <rect x="13" y="13" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                </svg>
-              </div>
-            </div>
-            <span className="font-retro text-[7px] text-ps1-cyan-soft/80 tracking-widest">MEM 1</span>
-          </div>
-
-          {/* Memory Card Slot 2 */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2">
-              <div className="w-12 h-8 rounded-sm border-2 bg-ps1-bios-bg-deep border-ps1-bios-border flex items-center justify-center">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-ps1-cyan-soft/50">
-                  <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                  <rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                  <rect x="13" y="7" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                  <rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                  <rect x="13" y="13" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
-                </svg>
-              </div>
-            </div>
-            <span className="font-retro text-[7px] text-ps1-cyan-soft/80 tracking-widest">MEM 2</span>
-          </div>
-        </div>
-      </div>
     </div>
     </>
   )
