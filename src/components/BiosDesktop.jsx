@@ -203,97 +203,39 @@ export default function BiosDesktop({
           gap: 'clamp(10px, 2vh, 24px)',
         }}
       >
-        {/* Central action panel */}
-        <div className="flex-1 min-h-0 flex items-center justify-center">
-          <div className="flex items-center gap-[clamp(14px,3vw,44px)]">
-            {/* Left emoji (BIOS / wrench) */}
-            <div
-              className="hidden sm:flex items-center justify-center shrink-0 select-none"
-              style={{
-                width: 'clamp(60px, 8vw, 120px)',
-                height: 'clamp(60px, 8vw, 120px)',
-                fontSize: 'clamp(44px, 6vw, 90px)',
-                filter: biosLoaded
-                  ? 'drop-shadow(0 4px 4px rgba(0,0,0,0.5))'
-                  : 'drop-shadow(0 4px 4px rgba(0,0,0,0.5)) grayscale(0.4) opacity(0.85)',
-              }}
-            >
-              🔧
-            </div>
+        {/* Two side blocks: wrench+LOAD BIOS | disc+LOAD GAME */}
+        <div className="flex-1 min-h-0 flex items-center justify-center gap-[clamp(14px,3vw,48px)]">
+          <IconBlock
+            icon="🔧"
+            accent="green"
+            loaded={biosLoaded}
+            fileName={biosFile?.name}
+            emptyLabel="— NO BIOS —"
+          >
+            <BiosActionButton onClick={onLoadBios}>
+              {biosLoaded ? 'CHANGE BIOS' : 'LOAD BIOS'}
+            </BiosActionButton>
+          </IconBlock>
 
-            {/* Tostado button stack */}
-            <div
-              className="ps1-bios-action-panel relative flex flex-col"
-              style={{
-                width: 'clamp(240px, 32vw, 400px)',
-                background: '#3a1e20',
-                padding: 'clamp(4px, 0.6vw, 8px)',
-                border: '2px solid #16080a',
-                boxShadow:
-                  '3px 3px 0 rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,200,160,0.2)',
-                gap: 'clamp(3px, 0.5vh, 6px)',
-              }}
-            >
-              <BiosActionButton onClick={onLoadBios}>
-                {biosLoaded ? 'CHANGE BIOS' : 'LOAD BIOS'}
-              </BiosActionButton>
-              <BiosActionButton
-                onClick={onLoadGame}
-                disabled={!biosLoaded}
-              >
-                {gameLoaded ? 'CHANGE GAME' : 'LOAD GAME'}
-              </BiosActionButton>
-              <BiosActionButton
-                onClick={onStart}
-                disabled={!canStart}
-                strong
-              >
-                START GAME
-              </BiosActionButton>
-            </div>
-
-            {/* Right emoji (GAME / disc) */}
-            <div
-              className="hidden sm:flex items-center justify-center shrink-0 select-none"
-              style={{
-                width: 'clamp(60px, 8vw, 120px)',
-                height: 'clamp(60px, 8vw, 120px)',
-                fontSize: 'clamp(44px, 6vw, 90px)',
-                filter: gameLoaded
-                  ? 'drop-shadow(0 4px 4px rgba(0,0,0,0.5))'
-                  : 'drop-shadow(0 4px 4px rgba(0,0,0,0.5)) grayscale(0.4) opacity(0.85)',
-              }}
-            >
-              💿
-            </div>
-          </div>
+          <IconBlock
+            icon="💿"
+            accent="yellow"
+            loaded={gameLoaded}
+            fileName={romFiles[0]?.name}
+            emptyLabel="— NO GAME —"
+          >
+            <BiosActionButton onClick={onLoadGame} disabled={!biosLoaded}>
+              {gameLoaded ? 'CHANGE GAME' : 'LOAD GAME'}
+            </BiosActionButton>
+          </IconBlock>
         </div>
 
-        {/* Filename readout row */}
-        <div className="flex items-center justify-between gap-[clamp(8px,2vw,24px)] text-center">
-          <div
-            className="flex-1 font-lcd text-[clamp(12px,1.4vw,17px)] text-white tracking-widest truncate"
-            title={biosFile?.name || ''}
-            style={{
-              background: biosLoaded ? 'rgba(27,107,47,0.8)' : 'rgba(20,20,25,0.65)',
-              borderTop: '1px solid rgba(255,255,255,0.18)',
-              borderBottom: '1px solid rgba(0,0,0,0.45)',
-              padding: '3px 10px',
-            }}
-          >
-            {biosFile?.name || '— NO BIOS —'}
-          </div>
-          <div
-            className="flex-1 font-lcd text-[clamp(12px,1.4vw,17px)] text-white tracking-widest truncate"
-            title={romFiles[0]?.name || ''}
-            style={{
-              background: gameLoaded ? 'rgba(124,106,16,0.85)' : 'rgba(20,20,25,0.65)',
-              borderTop: '1px solid rgba(255,255,255,0.18)',
-              borderBottom: '1px solid rgba(0,0,0,0.45)',
-              padding: '3px 10px',
-            }}
-          >
-            {romFiles[0]?.name || '— NO GAME —'}
+        {/* START GAME (primary) */}
+        <div className="flex items-center justify-center">
+          <div style={{ width: 'clamp(240px, 32vw, 400px)' }}>
+            <BiosActionButton onClick={onStart} disabled={!canStart} strong>
+              START GAME
+            </BiosActionButton>
           </div>
         </div>
 
@@ -314,6 +256,63 @@ export default function BiosDesktop({
             {roomLabel}
           </PillButton>
         </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Vertical block = big icon on top, action button below, file name beneath.
+ * Sits on a deep maroon panel with 3D border to match the BIOS reference.
+ */
+function IconBlock({ icon, accent, loaded, fileName, emptyLabel, children }) {
+  const bg = loaded
+    ? accent === 'green'
+      ? 'linear-gradient(180deg, #2b1e22 0%, #160a0c 100%)'
+      : 'linear-gradient(180deg, #2b1e22 0%, #160a0c 100%)'
+    : 'linear-gradient(180deg, #3a1e20 0%, #16080a 100%)'
+  const readoutBg = loaded
+    ? accent === 'green'
+      ? 'rgba(27,107,47,0.85)'
+      : 'rgba(124,106,16,0.9)'
+    : 'rgba(20,20,25,0.65)'
+  return (
+    <div
+      className="relative flex flex-col items-center"
+      style={{
+        width: 'clamp(220px, 30vw, 360px)',
+        background: bg,
+        border: '2px solid #0b0405',
+        boxShadow:
+          '3px 3px 0 rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,200,160,0.18)',
+        padding: 'clamp(14px, 2vw, 26px) clamp(12px, 1.6vw, 22px)',
+        gap: 'clamp(10px, 1.6vh, 18px)',
+      }}
+    >
+      <div
+        className="select-none"
+        style={{
+          fontSize: 'clamp(54px, 9vw, 130px)',
+          lineHeight: 1,
+          filter: loaded
+            ? 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))'
+            : 'drop-shadow(0 4px 6px rgba(0,0,0,0.6)) grayscale(0.35) opacity(0.9)',
+        }}
+      >
+        {icon}
+      </div>
+      <div className="w-full">{children}</div>
+      <div
+        className="w-full font-lcd text-[clamp(11px,1.3vw,15px)] text-white tracking-widest truncate text-center"
+        title={fileName || ''}
+        style={{
+          background: readoutBg,
+          borderTop: '1px solid rgba(255,255,255,0.18)',
+          borderBottom: '1px solid rgba(0,0,0,0.45)',
+          padding: '3px 10px',
+        }}
+      >
+        {fileName || emptyLabel}
       </div>
     </div>
   )
