@@ -357,6 +357,54 @@ html.crt-off .crt-overlay { display: none; }
     0 0 14px rgba(87, 227, 138, 0.55);
 }
 
+/* ---------- BIOS Memory Card Manager skin ---------- */
+/* Dark maroon/brown slot panel shown top-left and top-right. */
+.ps1-bios-slot-panel {
+  position: relative;
+  background: linear-gradient(180deg, #3a1e20 0%, #1e0f10 100%);
+  border-top: 2px solid #7a3335;
+  border-bottom: 2px solid #0a0404;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    2px 2px 0 rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+/* Tan action-menu button. */
+.ps1-bios-action {
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 210, 0.35),
+    inset 0 -1px 0 rgba(70, 45, 5, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: filter 0.12s ease, transform 0.08s ease;
+}
+.ps1-bios-action:hover {
+  filter: brightness(1.08);
+}
+.ps1-bios-action:active {
+  transform: translateY(1px);
+}
+
+/* Small confirm-style pill (YES / NO / EXIT look). */
+.ps1-bios-pill {
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 2px 0 rgba(0, 0, 0, 0.45),
+    0 3px 6px rgba(0, 0, 0, 0.35);
+  transition: filter 0.12s ease, transform 0.08s ease;
+}
+.ps1-bios-pill:hover {
+  filter: brightness(1.1);
+}
+.ps1-bios-pill:active {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(0, 0, 0, 0.45);
+}
+
 /* ---------- 3D BIOS objects (wrench / disc) ---------- */
 /* A perspective stage that makes rotateY() on children read as 3D. */
 .stage-3d {

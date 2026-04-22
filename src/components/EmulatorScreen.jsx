@@ -5,6 +5,7 @@ import { useGameRoom } from '../hooks/useGameRoom'
 import GamepadIndicator from './GamepadIndicator'
 import GameRoomPanel from './GameRoomPanel'
 import { Wrench3D, Disc3D } from './Bios3DObjects'
+import BiosDesktop from './BiosDesktop'
 
 /**
  * PS1 Memory Card Manager Style - Light Gray Grid Theme
@@ -341,116 +342,26 @@ function EmulatorScreen() {
               <ActionButton onClick={resetEmulator}>RESET</ActionButton>
             </div>
           ) : (
-            /* Unified BIOS-style loader screen. */
-            <div className="w-full h-full flex flex-col p-3 bg-ps1-bios-bg-deep animate-fade-in relative">
-              {/* Faint BIOS grid background */}
-              <div
-                className="absolute inset-0 opacity-20 pointer-events-none"
-                style={{
-                  backgroundImage:
-                    'linear-gradient(rgba(0,204,255,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(0,204,255,0.12) 1px, transparent 1px)',
-                  backgroundSize: '42px 42px',
-                }}
-              />
-
-              {/* Title bar */}
-              <div className="relative text-center mb-3">
-                <div className="font-ps font-semibold text-ps1-yellow text-[14px] tracking-[0.3em] glow-yellow">
-                  PlayHubGX
-                </div>
-                <div className="font-retro text-[7px] text-ps1-cyan-soft/70 tracking-[0.25em] mt-0.5">
-                  MEMORY CARD MANAGER
-                </div>
-              </div>
-
-              {/* Grid area */}
-              <div className="relative flex-1 grid grid-cols-12 grid-rows-8 gap-0 mb-3">
-                {/* Left column - Wrench (BIOS slot) */}
-                <div className="col-span-4 row-span-8 flex flex-col animate-slide-in-up">
-                  <div className="bg-ps1-bios-panel px-2 py-1 border border-ps1-bios-border mb-1">
-                    <SlotHeader slot="1" color="#44cc66" label="BIOS" />
-                  </div>
-                  <div
-                    className="flex-1 flex items-center justify-center border border-ps1-bios-border rounded-sm overflow-hidden"
-                    style={{
-                      background: 'linear-gradient(135deg, #10133a 0%, #1a1e48 100%)',
-                      boxShadow: biosFile
-                        ? 'inset 0 0 30px rgba(68,204,102,0.25), inset 0 0 0 1px rgba(68,204,102,0.35)'
-                        : 'inset 0 0 30px rgba(0,0,0,0.6)',
-                    }}
-                  >
-                    <Wrench3D accent={biosFile ? '#44cc66' : '#5eb6ff'} />
-                  </div>
-                  <div className="mt-2 flex flex-col items-center gap-1">
-                    <StartButton onClick={triggerBiosInput}>
-                      {biosFile ? 'CHANGE BIOS' : 'LOAD BIOS'}
-                    </StartButton>
-                    <div
-                      className="font-lcd text-[14px] leading-none text-ps1-cyan-soft text-center truncate w-full px-1"
-                      title={biosFile?.name || ''}
-                    >
-                      {biosFile?.name || '—'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Center column - START / RESET */}
-                <div className="col-span-4 row-span-8 flex flex-col items-center justify-center gap-3 animate-zoom-in">
-                  <StartButton
-                    onClick={startEmulator}
-                    className={biosFile && romFiles.length > 0
-                      ? '!bg-ps1-yellow/80 hover:!bg-ps1-yellow !text-black !border-ps1-yellow !shadow-ps1-yellow-glow'
-                      : 'opacity-40 pointer-events-none'}
-                  >
-                    START GAME
-                  </StartButton>
-                  {(biosFile || romFiles.length > 0) && (
-                    <ActionButton onClick={resetEmulator}>
-                      RESET
-                    </ActionButton>
-                  )}
-                </div>
-
-                {/* Right column - Disc (game slot) */}
-                <div className="col-span-4 row-span-8 flex flex-col animate-slide-in-up">
-                  <div className="bg-ps1-bios-panel px-2 py-1 border border-ps1-bios-border mb-1">
-                    <SlotHeader slot="2" color="#ffcc33" label="GAME" />
-                  </div>
-                  <div
-                    className="flex-1 flex items-center justify-center border border-ps1-bios-border rounded-sm overflow-hidden"
-                    style={{
-                      background: 'linear-gradient(135deg, #10133a 0%, #1a1e48 100%)',
-                      boxShadow: romFiles.length > 0
-                        ? 'inset 0 0 30px rgba(255,204,51,0.25), inset 0 0 0 1px rgba(255,204,51,0.35)'
-                        : 'inset 0 0 30px rgba(0,0,0,0.6)',
-                    }}
-                  >
-                    <Disc3D accent={romFiles.length > 0 ? '#ffcc33' : '#5eb6ff'} />
-                  </div>
-                  <div className="mt-2 flex flex-col items-center gap-1">
-                    <StartButton
-                      onClick={triggerRomInput}
-                      className={biosFile ? '' : 'opacity-40 pointer-events-none'}
-                    >
-                      {romFiles.length > 0 ? 'CHANGE GAME' : 'LOAD GAME'}
-                    </StartButton>
-                    <div
-                      className="font-lcd text-[14px] leading-none text-ps1-cyan-soft text-center truncate w-full px-1"
-                      title={romFiles[0]?.name || ''}
-                    >
-                      {romFiles[0]?.name || '—'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Hints */}
-              <div className="relative text-center mt-2">
-                <div className="font-retro text-[7px] text-ps1-cyan-soft/60 tracking-widest">
-                  BIOS: scph5501.bin / scph7001.bin / scph1001.bin · GAME: .bin, .cue, .iso, .img, .chd, .pbp
-                </div>
-              </div>
-            </div>
+            /* PSX BIOS Memory Card Manager desktop */
+            <BiosDesktop
+              biosFile={biosFile}
+              romFiles={romFiles}
+              onLoadBios={triggerBiosInput}
+              onLoadGame={triggerRomInput}
+              onStart={startEmulator}
+              onReset={resetEmulator}
+              onToggleRoom={() => {
+                if (isGuestStreaming) return
+                setShowGameRoom((v) => !v)
+              }}
+              gameRoomVisible={gameRoomVisible}
+              gameRoomActive={gameRoomActive}
+              roomLabel={
+                gameRoomActive
+                  ? (gameRoom.isHost ? 'HOSTING' : 'IN ROOM')
+                  : gameRoomVisible ? 'ROOM ON' : 'ROOM'
+              }
+            />
           )}
         </div>
       </div>
