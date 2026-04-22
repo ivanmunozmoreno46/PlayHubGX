@@ -46,8 +46,39 @@ const KEY_TO_BUTTON = {
   KeyT: 13,      // R2
 }
 
+// Standard Gamepad API button index -> libretro RetroPad button id.
+// See https://w3c.github.io/gamepad/#remapping for the canonical layout.
+const GAMEPAD_BUTTON_TO_LIBRETRO = {
+  0: 0,   // A / South / Cross
+  1: 8,   // B / East  / Circle
+  2: 1,   // X / West  / Square
+  3: 9,   // Y / North / Triangle
+  4: 10,  // LB -> L1
+  5: 11,  // RB -> R1
+  6: 12,  // LT -> L2
+  7: 13,  // RT -> R2
+  8: 2,   // Select / Back
+  9: 3,   // Start
+  10: 14, // L-stick press -> L3
+  11: 15, // R-stick press -> R3
+  12: 4,  // D-Up
+  13: 5,  // D-Down
+  14: 6,  // D-Left
+  15: 7,  // D-Right
+}
+
 // Libretro axis button ids use 0x7fff as the active value.
 const SPECIAL_BUTTON_IDS = new Set([16, 17, 18, 19, 20, 21, 22, 23])
+
+// Libretro axis-pair ids per analog stick axis. [negativeId, positiveId].
+// Matches the default EmulatorJS mapping (see simulateInput calls in
+// emulator.js around the gamepad axes handler).
+const AXIS_PAIRS = {
+  lx: [17, 16], // left stick X: negative = 17, positive = 16
+  ly: [19, 18], // left stick Y: negative = 19, positive = 18
+  rx: [21, 20], // right stick X
+  ry: [23, 22], // right stick Y
+}
 
 function generateRoomCode() {
   let code = ''
@@ -182,31 +213,69 @@ export function useGameRoom() {
     return stream
   }, [])
 
-  // Host: inject a remote key event into the emulator on Player 2.
-  const injectRemoteInput = useCallback((guestEntry, evt) => {
+  // Helper: write a single libretro button into the emulator as Player 2 and
+  // remember it in the guest's pressed set so we can release it on disconnect.
+  const writeButton = useCallback((guestEntry, buttonId, value) => {
     const ejs = typeof window !== 'undefined' ? window.EJS_emulator : null
     if (!ejs || !ejs.gameManager || typeof ejs.gameManager.simulateInput !== 'function') return
-    if (!evt || (evt.type !== 'keydown' && evt.type !== 'keyup')) return
-
-    const buttonId = KEY_TO_BUTTON[evt.code]
-    if (buttonId === undefined) return
-
-    const isDown = evt.type === 'keydown'
-    const value = isDown
-      ? (SPECIAL_BUTTON_IDS.has(buttonId) ? 0x7fff : 1)
-      : 0
-
+    if (typeof buttonId !== 'number' || Number.isNaN(buttonId)) return
     if (guestEntry) {
-      if (isDown) guestEntry.pressed.add(buttonId)
+      if (value) guestEntry.pressed.add(buttonId)
       else guestEntry.pressed.delete(buttonId)
     }
-
     try {
       ejs.gameManager.simulateInput(PLAYER_SLOT, buttonId, value)
     } catch (err) {
       console.warn('[GameRoom] simulateInput failed:', err)
     }
   }, [])
+
+  // Host: inject a remote input event into the emulator on Player 2.
+  // Supports keyboard (keydown/keyup), gamepad buttons (pad_button) and
+  // analog sticks (pad_axis).
+  const injectRemoteInput = useCallback((guestEntry, evt) => {
+    if (!evt || typeof evt !== 'object') return
+
+    if (evt.type === 'keydown' || evt.type === 'keyup') {
+      const buttonId = KEY_TO_BUTTON[evt.code]
+      if (buttonId === undefined) return
+      const isDown = evt.type === 'keydown'
+      const value = isDown
+        ? (SPECIAL_BUTTON_IDS.has(buttonId) ? 0x7fff : 1)
+        : 0
+      writeButton(guestEntry, buttonId, value)
+      return
+    }
+
+    if (evt.type === 'pad_button') {
+      const buttonId = Number(evt.id)
+      if (Number.isNaN(buttonId)) return
+      const isDown = Boolean(evt.value)
+      const value = isDown
+        ? (SPECIAL_BUTTON_IDS.has(buttonId) ? 0x7fff : 1)
+        : 0
+      writeButton(guestEntry, buttonId, value)
+      return
+    }
+
+    if (evt.type === 'pad_axis') {
+      const pair = AXIS_PAIRS[evt.axis]
+      if (!pair) return
+      const [negId, posId] = pair
+      // Clamp to [-1, 1] just in case.
+      const raw = Math.max(-1, Math.min(1, Number(evt.value) || 0))
+      if (raw > 0) {
+        writeButton(guestEntry, posId, Math.round(0x7fff * raw))
+        writeButton(guestEntry, negId, 0)
+      } else if (raw < 0) {
+        writeButton(guestEntry, negId, Math.round(0x7fff * -raw))
+        writeButton(guestEntry, posId, 0)
+      } else {
+        writeButton(guestEntry, posId, 0)
+        writeButton(guestEntry, negId, 0)
+      }
+    }
+  }, [writeButton])
 
   // Host: release every button currently held by a guest (on disconnect).
   const releaseGuestButtons = useCallback((guestEntry) => {
@@ -245,6 +314,8 @@ export function useGameRoom() {
     switch (msg.type) {
       case 'keydown':
       case 'keyup':
+      case 'pad_button':
+      case 'pad_axis':
         injectRemoteInput(entry, msg)
         break
       case 'ping':
@@ -349,11 +420,25 @@ export function useGameRoom() {
   const sendInput = useCallback((evt) => {
     const conn = hostDataConnRef.current
     if (!conn || !conn.open) return
-    if (!evt || (evt.type !== 'keydown' && evt.type !== 'keyup')) return
-    // Only forward keys we actually map, to avoid spamming the channel.
-    if (KEY_TO_BUTTON[evt.code] === undefined) return
+    if (!evt || typeof evt !== 'object') return
+
+    let payload = null
+    if (evt.type === 'keydown' || evt.type === 'keyup') {
+      // Only forward keys we actually map, to avoid spamming the channel.
+      if (KEY_TO_BUTTON[evt.code] === undefined) return
+      payload = { type: evt.type, code: evt.code, key: evt.key }
+    } else if (evt.type === 'pad_button') {
+      if (typeof evt.id !== 'number') return
+      payload = { type: 'pad_button', id: evt.id, value: evt.value ? 1 : 0 }
+    } else if (evt.type === 'pad_axis') {
+      if (!AXIS_PAIRS[evt.axis]) return
+      payload = { type: 'pad_axis', axis: evt.axis, value: Number(evt.value) || 0 }
+    } else {
+      return
+    }
+
     try {
-      conn.send(JSON.stringify({ type: evt.type, code: evt.code, key: evt.key }))
+      conn.send(JSON.stringify(payload))
     } catch (err) {
       console.warn('[GameRoom] Failed to send input:', err)
     }
@@ -546,3 +631,4 @@ export function useGameRoom() {
 }
 
 export const GAME_ROOM_KEY_MAP = KEY_TO_BUTTON
+export const GAME_ROOM_GAMEPAD_MAP = GAMEPAD_BUTTON_TO_LIBRETRO
