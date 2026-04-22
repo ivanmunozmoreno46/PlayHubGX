@@ -203,26 +203,6 @@ export default function BiosDesktop({
           gap: 'clamp(10px, 2vh, 24px)',
         }}
       >
-        {/* Top slot headers */}
-        <div className="flex items-start justify-between gap-[clamp(10px,3vw,48px)]">
-          <div className="relative flex-1 max-w-[42%]">
-            <SlotPanel
-              slot="1"
-              numberColor="green"
-              loaded={biosLoaded}
-              icon="🔧"
-            />
-          </div>
-          <div className="relative flex-1 max-w-[42%]">
-            <SlotPanel
-              slot="2"
-              numberColor="yellow"
-              loaded={gameLoaded}
-              icon="💿"
-            />
-          </div>
-        </div>
-
         {/* Central action panel */}
         <div className="flex-1 min-h-0 flex items-center justify-center">
           <div className="flex items-center gap-[clamp(14px,3vw,44px)]">
