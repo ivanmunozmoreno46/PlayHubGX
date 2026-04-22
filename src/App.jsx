@@ -109,12 +109,25 @@ function App() {
             </div>
           </div>
 
-          {/* ===== Front face (memory cards / controllers / switches) ===== */}
+          {/* ===== Front face =====
+           * Layout: POWER (left), memory cards + controller ports (centre),
+           * RESET (right). Thin vent strips fill the gaps on either side of
+           * the centre block.
+           */}
           <div className="bg-ps1-plastic border-t border-ps1-plastic-seam/60">
-            <div className="px-8 pt-4 pb-5 flex items-end justify-between gap-6">
+            <div className="px-8 pt-4 pb-5 flex items-center justify-between gap-6">
 
-              {/* Left column: memory card + controller stack */}
-              <div className="flex flex-col gap-3">
+              {/* Left: POWER */}
+              <div className="shrink-0">
+                <PowerSwitch active={isPoweredOn} onClick={handlePowerToggle} />
+              </div>
+
+              <div className="hidden md:block flex-1 self-stretch">
+                <div className="ps1-vents h-5 w-full opacity-60 rounded-sm my-auto" />
+              </div>
+
+              {/* Centre: memory cards on top, controller ports below */}
+              <div className="flex flex-col items-center gap-3 shrink-0">
                 <div className="flex items-center gap-3">
                   <CardSlot label="MEMORY CARD 1" />
                   <CardSlot label="MEMORY CARD 2" />
@@ -125,14 +138,12 @@ function App() {
                 </div>
               </div>
 
-              {/* Middle: vents */}
               <div className="hidden md:block flex-1 self-stretch">
-                <div className="ps1-vents h-full w-full opacity-70 rounded-sm" />
+                <div className="ps1-vents h-5 w-full opacity-60 rounded-sm my-auto" />
               </div>
 
-              {/* Right column: POWER + RESET */}
-              <div className="flex items-center gap-4">
-                <PowerSwitch active={isPoweredOn} onClick={handlePowerToggle} />
+              {/* Right: RESET */}
+              <div className="shrink-0">
                 <ResetButton
                   onClick={() => {
                     if (isPoweredOn) handlePowerToggle()
