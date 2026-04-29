@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Peer from 'peerjs'
+import { getPeerRtcConfig } from '../lib/turn'
 
 /**
  * Host-Client streaming Game Room using PeerJS (WebRTC).
@@ -334,7 +335,7 @@ export function useGameRoom() {
   // -------------------------------------------------------------
   // Host flow
   // -------------------------------------------------------------
-  const createRoom = useCallback(() => {
+  const createRoom = useCallback(async () => {
     if (peerRef.current) {
       try { peerRef.current.destroy() } catch (_) { /* noop */ }
       peerRef.current = null
@@ -354,12 +355,14 @@ export function useGameRoom() {
 
     const code = generateRoomCode()
     const peerId = toHostPeerId(code)
-    const peer = new Peer(peerId, { debug: 2 })
 
     setRole('hosting')
     setStatus('connecting')
     setRoomCode(code)
     setGuestCount(0)
+
+    const rtcConfig = await getPeerRtcConfig({ relayOnly: true })
+    const peer = new Peer(peerId, { debug: 2, config: rtcConfig })
 
     peer.on('open', () => {
       setStatus('waiting')
@@ -472,7 +475,7 @@ export function useGameRoom() {
     pendingPingsRef.current.clear()
   }, [])
 
-  const joinRoom = useCallback((rawCode) => {
+  const joinRoom = useCallback(async (rawCode) => {
     const code = String(rawCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
     if (code.length !== 6) {
       setError('Room codes must be 6 characters long.')
@@ -490,12 +493,14 @@ export function useGameRoom() {
 
     const peerId = randomGuestPeerId()
     const hostPeerId = toHostPeerId(code)
-    const peer = new Peer(peerId, { debug: 2 })
 
     setRole('guest')
     setStatus('connecting')
     setRoomCode(code)
     setLatency(null)
+
+    const rtcConfig = await getPeerRtcConfig({ relayOnly: true })
+    const peer = new Peer(peerId, { debug: 2, config: rtcConfig })
 
     peer.on('open', () => {
       const conn = peer.connect(hostPeerId, { reliable: true })
